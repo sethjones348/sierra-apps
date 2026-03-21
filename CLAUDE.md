@@ -39,7 +39,7 @@ When asked to build a new app, follow these steps:
   - How to run it locally
   - How to build for production (if applicable)
 - **No unnecessary complexity:** Use the simplest approach that works. Don't add linting configs, CI pipelines, or monorepo tooling unless asked.
-- **Git:** Commit meaningful changes with clear messages. Don't bundle unrelated app changes in one commit.
+- **Git:** Commit meaningful changes with clear messages. Don't bundle unrelated app changes in one commit. Pushing directly to `main` is fine in this repo.
 
 ## Running an Existing App
 
