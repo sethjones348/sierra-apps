@@ -86,14 +86,42 @@ GitHub Pages must be enabled on this repo. Go to **Settings > Pages** on GitHub 
 
 Once enabled, everything pushed to `main` is live at `https://sethjones348.github.io/sierra-apps/`.
 
-### Mobile-first design
+### Design aesthetic
 
-Since the user will mostly view apps on their phone:
+**The user loves the look and feel of apps like Anthropologie, Zara, and similar fashion/lifestyle brands.** All apps should follow this aesthetic:
+
+**Typography:**
+- Use elegant, thin/light-weight fonts. Import a serif or refined sans-serif from Google Fonts (e.g., `Playfair Display` for headings, `Inter` or `DM Sans` for body text).
+- Generous letter-spacing on headings and uppercase labels (e.g., `letter-spacing: 0.1em`).
+- Light font weights (300–400 for body, 400–500 for headings).
+
+**Color palette:**
+- Muted, warm neutrals: cream/ivory (`#FAF8F5`), warm gray (`#8A8478`), soft black (`#2C2C2C`), white (`#FFFFFF`).
+- Accent sparingly — dusty rose (`#C4A68A`), sage (`#A3A88E`), or muted gold (`#C5A46D`).
+- Avoid bright, saturated colors. Everything should feel soft and elevated.
+
+**Layout & spacing:**
+- Lots of whitespace — let the design breathe.
+- Clean grid layouts with generous padding.
+- Full-width sections with contained content (max-width ~500px for mobile).
+- Subtle dividers (thin 1px lines in light gray) instead of heavy borders or shadows.
+
+**UI elements:**
+- Buttons: minimal, often outlined or text-only. Rounded corners (6–8px) or pill-shaped. Uppercase text with letter-spacing.
+- Cards: very subtle shadows or no shadows at all — use background color contrast instead.
+- Inputs: clean underline or thin border style, not chunky.
+- Icons: thin line-weight icons (use Lucide or Feather icons via CDN).
+
+**Interactions:**
+- Subtle transitions (0.2s ease) on hover/active states.
+- Avoid flashy animations. Elegance over excitement.
+- Smooth scroll behavior.
+
+**Mobile-first:**
 - Design for small screens first (responsive CSS)
-- Use large tap targets (min 44x44px) for buttons and links
-- Use readable font sizes (min 16px body text)
+- Large tap targets (min 44x44px) for buttons and links
+- Readable font sizes (min 16px body text)
 - Avoid hover-dependent interactions
-- Test that layouts work well in a narrow viewport
 
 ## Running an Existing App
 
