@@ -41,31 +41,59 @@ When asked to build a new app, follow these steps:
 - **No unnecessary complexity:** Use the simplest approach that works. Don't add linting configs, CI pipelines, or monorepo tooling unless asked.
 - **Git:** Commit meaningful changes with clear messages. Don't bundle unrelated app changes in one commit. Pushing directly to `main` is fine in this repo.
 
-## Getting Apps Running Immediately
+## Deploying Apps with GitHub Pages
 
-**This is critical.** When building or modifying an app, always get it running so the user can see and test it right away. Don't just write code and stop.
+**This is critical.** The user primarily works from the Claude app on their phone. They can't access `localhost` or dev servers. Every app must be deployable to **GitHub Pages** so the user can open it in their phone's browser via a real URL.
 
-After creating or updating an app:
+The GitHub Pages site for this repo is:
+**`https://sethjones348.github.io/sierra-apps/`**
 
-1. **Install dependencies** (`npm install`, `pip install -r requirements.txt`, etc.)
-2. **Start the dev server** in the background (`npm run dev`, `npx expo start`, etc.)
-3. **Tell the user the URL or how to access it** (e.g., `http://localhost:5173`)
-4. **Verify it works** — check that the server started without errors
+Each app is served from a subdirectory:
+**`https://sethjones348.github.io/sierra-apps/<app-name>/`**
 
-For **web apps (Vite, Next.js, etc.):**
-- Start the dev server and confirm the local URL
-- Vite defaults to `http://localhost:5173`, Next.js to `http://localhost:3000`
-- Use `--host` flag when starting Vite apps so they're accessible on the network: `npm run dev -- --host`
+### How to deploy an app
 
-For **mobile apps (Expo):**
-- Start with `npx expo start`
-- Tell the user to scan the QR code with the Expo Go app on their phone
-- Alternatively, suggest pressing `w` to open the web version for quick testing
+1. **Build the app** so it produces static files (HTML/CSS/JS).
+2. **Put the built output in the app's directory** so it can be served directly from the repo.
+3. **Update `index.html` at the repo root** — add a card linking to the new app so it appears on the homepage.
+4. **Commit and push to `main`** — GitHub Pages will serve the files automatically.
+5. **Give the user the URL** so they can open it on their phone.
 
-For **static sites:**
-- Use `npx serve .` or `python3 -m http.server 8000` to serve the files
+### For static HTML/CSS/JS apps (simplest):
+- Just create files directly in `apps/<app-name>/` — they're already ready to serve.
+- No build step needed.
 
-The goal is: the user asks for an app, and within minutes they can see it working in their browser or on their phone.
+### For Vite + React apps:
+- Set the `base` option in `vite.config.ts` to `/sierra-apps/<app-name>/` so asset paths work on GitHub Pages.
+- Build with `npm run build`.
+- Copy or configure the output (`dist/`) so the built files end up committed to the repo. The simplest approach: set `build.outDir` to `./` or commit the `dist/` contents directly into the app directory.
+- Alternatively, keep it simple and just build single-file apps with inline scripts and styles — no build step needed.
+
+### Prefer simple, buildless apps
+
+Since everything deploys via GitHub Pages, **prefer simple static apps whenever possible**:
+- A single `index.html` with inline `<style>` and `<script>` tags is often all you need.
+- Use CDN links for libraries (e.g., React via `https://unpkg.com/react@18/umd/react.production.min.js`).
+- This avoids build steps entirely — just write, commit, push, and it's live.
+- Only use a build tool (Vite, etc.) when the app genuinely needs it (complex routing, many components, TypeScript, etc.).
+
+### GitHub Pages setup (one-time)
+
+GitHub Pages must be enabled on this repo. Go to **Settings > Pages** on GitHub and set:
+- **Source:** Deploy from a branch
+- **Branch:** `main`
+- **Folder:** `/ (root)`
+
+Once enabled, everything pushed to `main` is live at `https://sethjones348.github.io/sierra-apps/`.
+
+### Mobile-first design
+
+Since the user will mostly view apps on their phone:
+- Design for small screens first (responsive CSS)
+- Use large tap targets (min 44x44px) for buttons and links
+- Use readable font sizes (min 16px body text)
+- Avoid hover-dependent interactions
+- Test that layouts work well in a narrow viewport
 
 ## Running an Existing App
 
