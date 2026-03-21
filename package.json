@@ -1,0 +1,7 @@
+{
+  "name": "sierra-apps",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ]
+}
