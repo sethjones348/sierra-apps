@@ -41,6 +41,32 @@ When asked to build a new app, follow these steps:
 - **No unnecessary complexity:** Use the simplest approach that works. Don't add linting configs, CI pipelines, or monorepo tooling unless asked.
 - **Git:** Commit meaningful changes with clear messages. Don't bundle unrelated app changes in one commit. Pushing directly to `main` is fine in this repo.
 
+## Getting Apps Running Immediately
+
+**This is critical.** When building or modifying an app, always get it running so the user can see and test it right away. Don't just write code and stop.
+
+After creating or updating an app:
+
+1. **Install dependencies** (`npm install`, `pip install -r requirements.txt`, etc.)
+2. **Start the dev server** in the background (`npm run dev`, `npx expo start`, etc.)
+3. **Tell the user the URL or how to access it** (e.g., `http://localhost:5173`)
+4. **Verify it works** — check that the server started without errors
+
+For **web apps (Vite, Next.js, etc.):**
+- Start the dev server and confirm the local URL
+- Vite defaults to `http://localhost:5173`, Next.js to `http://localhost:3000`
+- Use `--host` flag when starting Vite apps so they're accessible on the network: `npm run dev -- --host`
+
+For **mobile apps (Expo):**
+- Start with `npx expo start`
+- Tell the user to scan the QR code with the Expo Go app on their phone
+- Alternatively, suggest pressing `w` to open the web version for quick testing
+
+For **static sites:**
+- Use `npx serve .` or `python3 -m http.server 8000` to serve the files
+
+The goal is: the user asks for an app, and within minutes they can see it working in their browser or on their phone.
+
 ## Running an Existing App
 
 To work on an existing app, `cd` into its directory under `apps/` and follow the instructions in its README.md.
