@@ -41,6 +41,88 @@ When asked to build a new app, follow these steps:
 - **No unnecessary complexity:** Use the simplest approach that works. Don't add linting configs, CI pipelines, or monorepo tooling unless asked.
 - **Git:** Commit meaningful changes with clear messages. Don't bundle unrelated app changes in one commit. Pushing directly to `main` is fine in this repo.
 
+## Deploying Apps with GitHub Pages
+
+**This is critical.** The user primarily works from the Claude app on their phone. They can't access `localhost` or dev servers. Every app must be deployable to **GitHub Pages** so the user can open it in their phone's browser via a real URL.
+
+The GitHub Pages site for this repo is:
+**`https://sethjones348.github.io/sierra-apps/`**
+
+Each app is served from a subdirectory:
+**`https://sethjones348.github.io/sierra-apps/<app-name>/`**
+
+### How to deploy an app
+
+1. **Build the app** so it produces static files (HTML/CSS/JS).
+2. **Put the built output in the app's directory** so it can be served directly from the repo.
+3. **Update `index.html` at the repo root** — add a card linking to the new app so it appears on the homepage.
+4. **Commit and push to `main`** — GitHub Pages will serve the files automatically.
+5. **Give the user the URL** so they can open it on their phone.
+
+### For static HTML/CSS/JS apps (simplest):
+- Just create files directly in `apps/<app-name>/` — they're already ready to serve.
+- No build step needed.
+
+### For Vite + React apps:
+- Set the `base` option in `vite.config.ts` to `/sierra-apps/<app-name>/` so asset paths work on GitHub Pages.
+- Build with `npm run build`.
+- Copy or configure the output (`dist/`) so the built files end up committed to the repo. The simplest approach: set `build.outDir` to `./` or commit the `dist/` contents directly into the app directory.
+- Alternatively, keep it simple and just build single-file apps with inline scripts and styles — no build step needed.
+
+### Prefer simple, buildless apps
+
+Since everything deploys via GitHub Pages, **prefer simple static apps whenever possible**:
+- A single `index.html` with inline `<style>` and `<script>` tags is often all you need.
+- Use CDN links for libraries (e.g., React via `https://unpkg.com/react@18/umd/react.production.min.js`).
+- This avoids build steps entirely — just write, commit, push, and it's live.
+- Only use a build tool (Vite, etc.) when the app genuinely needs it (complex routing, many components, TypeScript, etc.).
+
+### GitHub Pages setup (one-time)
+
+GitHub Pages must be enabled on this repo. Go to **Settings > Pages** on GitHub and set:
+- **Source:** Deploy from a branch
+- **Branch:** `main`
+- **Folder:** `/ (root)`
+
+Once enabled, everything pushed to `main` is live at `https://sethjones348.github.io/sierra-apps/`.
+
+### Design aesthetic
+
+**The user loves the look and feel of apps like Anthropologie, Zara, and similar fashion/lifestyle brands.** All apps should follow this aesthetic:
+
+**Typography:**
+- Use elegant, thin/light-weight fonts. Import a serif or refined sans-serif from Google Fonts (e.g., `Playfair Display` for headings, `Inter` or `DM Sans` for body text).
+- Generous letter-spacing on headings and uppercase labels (e.g., `letter-spacing: 0.1em`).
+- Light font weights (300–400 for body, 400–500 for headings).
+
+**Color palette:**
+- Muted, warm neutrals: cream/ivory (`#FAF8F5`), warm gray (`#8A8478`), soft black (`#2C2C2C`), white (`#FFFFFF`).
+- Accent sparingly — dusty rose (`#C4A68A`), sage (`#A3A88E`), or muted gold (`#C5A46D`).
+- Avoid bright, saturated colors. Everything should feel soft and elevated.
+
+**Layout & spacing:**
+- Lots of whitespace — let the design breathe.
+- Clean grid layouts with generous padding.
+- Full-width sections with contained content (max-width ~500px for mobile).
+- Subtle dividers (thin 1px lines in light gray) instead of heavy borders or shadows.
+
+**UI elements:**
+- Buttons: minimal, often outlined or text-only. Rounded corners (6–8px) or pill-shaped. Uppercase text with letter-spacing.
+- Cards: very subtle shadows or no shadows at all — use background color contrast instead.
+- Inputs: clean underline or thin border style, not chunky.
+- Icons: thin line-weight icons (use Lucide or Feather icons via CDN).
+
+**Interactions:**
+- Subtle transitions (0.2s ease) on hover/active states.
+- Avoid flashy animations. Elegance over excitement.
+- Smooth scroll behavior.
+
+**Mobile-first:**
+- Design for small screens first (responsive CSS)
+- Large tap targets (min 44x44px) for buttons and links
+- Readable font sizes (min 16px body text)
+- Avoid hover-dependent interactions
+
 ## Running an Existing App
 
 To work on an existing app, `cd` into its directory under `apps/` and follow the instructions in its README.md.
