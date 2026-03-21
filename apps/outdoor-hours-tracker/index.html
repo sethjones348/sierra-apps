@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Outdoor Hours</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 300;
+      background: #FAF8F5;
+      color: #2C2C2C;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    header {
+      padding: 2.5rem 1.5rem 1.5rem;
+      text-align: center;
+      border-bottom: 1px solid #E8E4DF;
+    }
+
+    header h1 {
+      font-family: 'Playfair Display', serif;
+      font-weight: 400;
+      font-size: 1.6rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    header p {
+      color: #8A8478;
+      font-size: 0.8rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      font-weight: 400;
+      margin-top: 0.3rem;
+    }
+
+    .container {
+      max-width: 500px;
+      margin: 0 auto;
+      padding: 0 1.5rem 4rem;
+    }
+
+    /* Total summary */
+    .total-section {
+      text-align: center;
+      padding: 2.5rem 0 2rem;
+      border-bottom: 1px solid #E8E4DF;
+    }
+
+    .total-label {
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: #8A8478;
+      font-weight: 400;
+      margin-bottom: 0.5rem;
+    }
+
+    .total-hours {
+      font-family: 'Playfair Display', serif;
+      font-size: 3rem;
+      font-weight: 400;
+      letter-spacing: 0.02em;
+      color: #2C2C2C;
+    }
+
+    .total-hours span {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 300;
+      color: #8A8478;
+      letter-spacing: 0.05em;
+    }
+
+    .week-summary {
+      margin-top: 0.8rem;
+      font-size: 0.8rem;
+      color: #A3A88E;
+      letter-spacing: 0.05em;
+    }
+
+    /* Stopwatch */
+    .stopwatch-section {
+      padding: 2rem 0;
+      text-align: center;
+      border-bottom: 1px solid #E8E4DF;
+    }
+
+    .section-title {
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: #8A8478;
+      font-weight: 400;
+      margin-bottom: 1.5rem;
+    }
+
+    .stopwatch-display {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 2.8rem;
+      font-weight: 300;
+      letter-spacing: 0.08em;
+      color: #2C2C2C;
+      margin-bottom: 1.5rem;
+    }
+
+    .stopwatch-buttons {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+    }
+
+    .btn {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.75rem;
+      font-weight: 400;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      border: 1px solid #2C2C2C;
+      background: transparent;
+      color: #2C2C2C;
+      padding: 0.75rem 2rem;
+      border-radius: 30px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      min-width: 120px;
+      min-height: 44px;
+    }
+
+    .btn:active {
+      opacity: 0.6;
+    }
+
+    .btn-primary {
+      background: #2C2C2C;
+      color: #FAF8F5;
+    }
+
+    .btn-primary:active {
+      background: #444;
+    }
+
+    .btn-save {
+      border-color: #A3A88E;
+      color: #A3A88E;
+    }
+
+    .btn-save:active {
+      background: #A3A88E;
+      color: #FAF8F5;
+    }
+
+    .btn-danger {
+      border-color: #C4A68A;
+      color: #C4A68A;
+    }
+
+    .btn-danger:active {
+      background: #C4A68A;
+      color: #FAF8F5;
+    }
+
+    .btn:disabled {
+      opacity: 0.3;
+      cursor: default;
+    }
+
+    /* Log past hours */
+    .log-section {
+      padding: 2rem 0;
+      border-bottom: 1px solid #E8E4DF;
+    }
+
+    .log-form {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+    }
+
+    .input-group label {
+      font-size: 0.7rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: #8A8478;
+      font-weight: 400;
+    }
+
+    .input-group input {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 1rem;
+      font-weight: 300;
+      padding: 0.6rem 0;
+      border: none;
+      border-bottom: 1px solid #D5D0CA;
+      background: transparent;
+      color: #2C2C2C;
+      outline: none;
+      transition: border-color 0.2s ease;
+      min-height: 44px;
+    }
+
+    .input-group input:focus {
+      border-bottom-color: #2C2C2C;
+    }
+
+    .log-btn-row {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 0.5rem;
+    }
+
+    /* History */
+    .history-section {
+      padding: 2rem 0 1rem;
+    }
+
+    .history-list {
+      margin-top: 1rem;
+    }
+
+    .history-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 0;
+      border-bottom: 1px solid #E8E4DF;
+    }
+
+    .history-date {
+      font-size: 0.85rem;
+      color: #2C2C2C;
+      font-weight: 400;
+    }
+
+    .history-note {
+      font-size: 0.75rem;
+      color: #8A8478;
+      margin-top: 0.15rem;
+    }
+
+    .history-duration {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 400;
+      color: #2C2C2C;
+      white-space: nowrap;
+    }
+
+    .history-empty {
+      text-align: center;
+      color: #8A8478;
+      font-size: 0.85rem;
+      padding: 2rem 0;
+    }
+
+    .history-item-left {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .history-item-right {
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      margin-left: 1rem;
+    }
+
+    .delete-btn {
+      background: none;
+      border: none;
+      color: #C4A68A;
+      font-size: 0.65rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      cursor: pointer;
+      padding: 0.3rem;
+      font-family: 'DM Sans', sans-serif;
+      min-width: 44px;
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.2s ease;
+    }
+
+    .delete-btn:active {
+      opacity: 0.5;
+    }
+
+    .clear-all-row {
+      text-align: center;
+      margin-top: 1.5rem;
+    }
+
+    .clear-all-btn {
+      font-family: 'DM Sans', sans-serif;
+      background: none;
+      border: none;
+      color: #C4A68A;
+      font-size: 0.7rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      cursor: pointer;
+      padding: 0.5rem 1rem;
+      min-height: 44px;
+      transition: opacity 0.2s ease;
+    }
+
+    .clear-all-btn:active {
+      opacity: 0.5;
+    }
+
+    /* Back link */
+    .back-link {
+      display: inline-block;
+      color: #8A8478;
+      text-decoration: none;
+      font-size: 0.75rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 1rem 1.5rem;
+      transition: opacity 0.2s ease;
+    }
+
+    .back-link:active { opacity: 0.5; }
+  </style>
+</head>
+<body>
+  <a class="back-link" href="/sierra-apps/">&larr; Back</a>
+  <header>
+    <h1>Outdoor Hours</h1>
+    <p>Time well spent</p>
+  </header>
+
+  <div class="container">
+    <!-- Total -->
+    <div class="total-section">
+      <div class="total-label">All Time Total</div>
+      <div class="total-hours" id="totalDisplay">0<span> hrs</span></div>
+      <div class="week-summary" id="weekSummary">0 hrs this week</div>
+    </div>
+
+    <!-- Stopwatch -->
+    <div class="stopwatch-section">
+      <div class="section-title">Stopwatch</div>
+      <div class="stopwatch-display" id="stopwatchDisplay">00:00:00</div>
+      <div class="stopwatch-buttons">
+        <button class="btn btn-primary" id="startStopBtn" onclick="toggleStopwatch()">Start</button>
+        <button class="btn btn-save" id="saveBtn" onclick="saveStopwatch()" disabled>Save</button>
+        <button class="btn btn-danger" id="resetBtn" onclick="resetStopwatch()" disabled>Reset</button>
+      </div>
+    </div>
+
+    <!-- Log past hours -->
+    <div class="log-section">
+      <div class="section-title">Log Past Hours</div>
+      <div class="log-form">
+        <div class="input-group">
+          <label>Date</label>
+          <input type="date" id="logDate">
+        </div>
+        <div class="input-group">
+          <label>Hours</label>
+          <input type="number" id="logHours" placeholder="e.g. 2.5" min="0" step="0.25">
+        </div>
+        <div class="input-group">
+          <label>Note (optional)</label>
+          <input type="text" id="logNote" placeholder="e.g. Park walk">
+        </div>
+        <div class="log-btn-row">
+          <button class="btn" onclick="logPastHours()">Add Entry</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- History -->
+    <div class="history-section">
+      <div class="section-title">History</div>
+      <div class="history-list" id="historyList">
+        <div class="history-empty">No entries yet</div>
+      </div>
+      <div class="clear-all-row" id="clearAllRow" style="display:none;">
+        <button class="clear-all-btn" onclick="clearAll()">Clear All History</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- State ---
+    const STORAGE_KEY = 'outdoor-hours-data';
+    let entries = [];
+    let stopwatchInterval = null;
+    let stopwatchStartTime = null;
+    let stopwatchElapsed = 0; // ms
+    let stopwatchRunning = false;
+
+    // --- Persistence ---
+    function loadData() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) entries = JSON.parse(raw);
+      } catch (e) {
+        entries = [];
+      }
+    }
+
+    function saveData() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+    }
+
+    // --- Stopwatch ---
+    function toggleStopwatch() {
+      if (stopwatchRunning) {
+        pauseStopwatch();
+      } else {
+        startStopwatch();
+      }
+    }
+
+    function startStopwatch() {
+      stopwatchRunning = true;
+      stopwatchStartTime = Date.now() - stopwatchElapsed;
+      stopwatchInterval = setInterval(updateStopwatchDisplay, 100);
+      document.getElementById('startStopBtn').textContent = 'Pause';
+      document.getElementById('saveBtn').disabled = false;
+      document.getElementById('resetBtn').disabled = false;
+    }
+
+    function pauseStopwatch() {
+      stopwatchRunning = false;
+      stopwatchElapsed = Date.now() - stopwatchStartTime;
+      clearInterval(stopwatchInterval);
+      document.getElementById('startStopBtn').textContent = 'Resume';
+      document.getElementById('saveBtn').disabled = false;
+      document.getElementById('resetBtn').disabled = false;
+    }
+
+    function resetStopwatch() {
+      stopwatchRunning = false;
+      stopwatchElapsed = 0;
+      stopwatchStartTime = null;
+      clearInterval(stopwatchInterval);
+      document.getElementById('stopwatchDisplay').textContent = '00:00:00';
+      document.getElementById('startStopBtn').textContent = 'Start';
+      document.getElementById('saveBtn').disabled = true;
+      document.getElementById('resetBtn').disabled = true;
+    }
+
+    function saveStopwatch() {
+      const elapsed = stopwatchRunning
+        ? Date.now() - stopwatchStartTime
+        : stopwatchElapsed;
+
+      if (elapsed < 1000) return; // ignore < 1 second
+
+      const hours = elapsed / 3600000;
+      const today = new Date().toISOString().slice(0, 10);
+
+      entries.unshift({
+        id: Date.now(),
+        date: today,
+        hours: Math.round(hours * 100) / 100,
+        note: 'Stopwatch'
+      });
+
+      saveData();
+      renderAll();
+      resetStopwatch();
+    }
+
+    function updateStopwatchDisplay() {
+      const elapsed = Date.now() - stopwatchStartTime;
+      const totalSec = Math.floor(elapsed / 1000);
+      const h = Math.floor(totalSec / 3600);
+      const m = Math.floor((totalSec % 3600) / 60);
+      const s = totalSec % 60;
+      document.getElementById('stopwatchDisplay').textContent =
+        pad(h) + ':' + pad(m) + ':' + pad(s);
+    }
+
+    function pad(n) {
+      return n.toString().padStart(2, '0');
+    }
+
+    // --- Log past hours ---
+    function logPastHours() {
+      const dateInput = document.getElementById('logDate');
+      const hoursInput = document.getElementById('logHours');
+      const noteInput = document.getElementById('logNote');
+
+      const date = dateInput.value;
+      const hours = parseFloat(hoursInput.value);
+
+      if (!date || isNaN(hours) || hours <= 0) return;
+
+      entries.unshift({
+        id: Date.now(),
+        date: date,
+        hours: Math.round(hours * 100) / 100,
+        note: noteInput.value.trim() || ''
+      });
+
+      saveData();
+      renderAll();
+
+      // Clear form
+      hoursInput.value = '';
+      noteInput.value = '';
+    }
+
+    // --- Delete ---
+    function deleteEntry(id) {
+      entries = entries.filter(e => e.id !== id);
+      saveData();
+      renderAll();
+    }
+
+    function clearAll() {
+      if (confirm('Clear all history? This cannot be undone.')) {
+        entries = [];
+        saveData();
+        renderAll();
+      }
+    }
+
+    // --- Rendering ---
+    function renderAll() {
+      renderTotal();
+      renderWeekSummary();
+      renderHistory();
+    }
+
+    function renderTotal() {
+      const total = entries.reduce((sum, e) => sum + e.hours, 0);
+      const display = total < 10
+        ? total.toFixed(1)
+        : Math.round(total).toString();
+      document.getElementById('totalDisplay').innerHTML =
+        display + '<span> hrs</span>';
+    }
+
+    function renderWeekSummary() {
+      const now = new Date();
+      const dayOfWeek = now.getDay();
+      const startOfWeek = new Date(now);
+      startOfWeek.setDate(now.getDate() - dayOfWeek);
+      startOfWeek.setHours(0, 0, 0, 0);
+      const startStr = startOfWeek.toISOString().slice(0, 10);
+
+      const weekTotal = entries
+        .filter(e => e.date >= startStr)
+        .reduce((sum, e) => sum + e.hours, 0);
+
+      document.getElementById('weekSummary').textContent =
+        (weekTotal < 10 ? weekTotal.toFixed(1) : Math.round(weekTotal)) + ' hrs this week';
+    }
+
+    function renderHistory() {
+      const list = document.getElementById('historyList');
+      const clearRow = document.getElementById('clearAllRow');
+
+      if (entries.length === 0) {
+        list.innerHTML = '<div class="history-empty">No entries yet</div>';
+        clearRow.style.display = 'none';
+        return;
+      }
+
+      clearRow.style.display = 'block';
+
+      list.innerHTML = entries.map(e => {
+        const dateObj = new Date(e.date + 'T12:00:00');
+        const formatted = dateObj.toLocaleDateString('en-US', {
+          month: 'short', day: 'numeric', year: 'numeric'
+        });
+        const hoursStr = e.hours < 1
+          ? Math.round(e.hours * 60) + ' min'
+          : e.hours.toFixed(1) + ' hrs';
+        const noteHtml = e.note
+          ? '<div class="history-note">' + escapeHtml(e.note) + '</div>'
+          : '';
+
+        return '<div class="history-item">' +
+          '<div class="history-item-left">' +
+            '<div class="history-date">' + formatted + '</div>' +
+            noteHtml +
+          '</div>' +
+          '<div class="history-item-right">' +
+            '<div class="history-duration">' + hoursStr + '</div>' +
+            '<button class="delete-btn" onclick="deleteEntry(' + e.id + ')">&times;</button>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    // --- Init ---
+    (function init() {
+      // Set default date to today
+      const today = new Date().toISOString().slice(0, 10);
+      document.getElementById('logDate').value = today;
+
+      loadData();
+      renderAll();
+    })();
+  </script>
+</body>
+</html>
