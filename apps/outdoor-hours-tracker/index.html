@@ -769,11 +769,18 @@
     // Render auth UI
     storage.renderAuthUI(document.getElementById('authSection'), {
       onSignIn: async () => {
+        // Share auth credentials with photo storage instance
+        photoStorage.accessToken = storage.accessToken;
+        photoStorage.tokenClient = storage.tokenClient;
+
         entries = await storage.syncFromDrive(entries, mergeEntries);
         photos = await photoStorage.syncFromDrive(photos, mergePhotos);
         renderAll();
       },
-      onSignOut: () => {}
+      onSignOut: () => {
+        photoStorage.accessToken = null;
+        photoStorage.driveFileId = null;
+      }
     });
 
     function mergeEntries(local, remote) {
@@ -1161,6 +1168,8 @@
         if (a.date !== b.date) return b.date.localeCompare(a.date);
         return b.id - a.id;
       });
+      // Keep photo storage token in sync with main storage
+      photoStorage.accessToken = storage.accessToken;
       photoStorage.save(photos);
       cancelPhoto();
       renderHistory();
