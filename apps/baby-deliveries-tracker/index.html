@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Baby Deliveries</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="/sierra-apps/shared/config.js"></script>
+  <script src="/sierra-apps/shared/google-drive-storage.js"></script>
+  <style id="gds-styles"></style>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 300;
+      background: #FAF8F5;
+      color: #2C2C2C;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    header {
+      padding: 2.5rem 1.5rem 1.5rem;
+      text-align: center;
+      border-bottom: 1px solid #E8E4DF;
+    }
+
+    header h1 {
+      font-family: 'Playfair Display', serif;
+      font-weight: 400;
+      font-size: 1.8rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 0.4rem;
+    }
+
+    header p {
+      color: #8A8478;
+      font-size: 0.75rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      font-weight: 400;
+    }
+
+    .container {
+      max-width: 500px;
+      margin: 0 auto;
+      padding: 0 1.5rem 4rem;
+    }
+
+    #authSection {
+      padding: 1.2rem 0;
+      text-align: center;
+    }
+
+    .signin-prompt {
+      text-align: center;
+      color: #8A8478;
+      padding: 4rem 1rem;
+      font-size: 0.95rem;
+      line-height: 1.8;
+      letter-spacing: 0.02em;
+    }
+
+    .signin-prompt span {
+      display: block;
+      font-family: 'Playfair Display', serif;
+      font-size: 1.1rem;
+      color: #2C2C2C;
+      margin-bottom: 0.5rem;
+    }
+
+    /* Stats Dashboard */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1px;
+      background: #E8E4DF;
+      border: 1px solid #E8E4DF;
+      margin: 1.5rem 0;
+    }
+
+    .stat-card {
+      background: #FAF8F5;
+      padding: 1.2rem 1rem;
+      text-align: center;
+    }
+
+    .stat-card.full-width {
+      grid-column: 1 / -1;
+    }
+
+    .stat-value {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.5rem;
+      font-weight: 400;
+      color: #2C2C2C;
+      margin-bottom: 0.2rem;
+    }
+
+    .stat-label {
+      font-size: 0.65rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: #8A8478;
+      font-weight: 400;
+    }
+
+    .stat-detail {
+      font-size: 0.7rem;
+      color: #A3A88E;
+      margin-top: 0.3rem;
+      font-weight: 300;
+    }
+
+    /* Form */
+    .section-title {
+      font-family: 'Playfair Display', serif;
+      font-weight: 400;
+      font-size: 1rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin: 2rem 0 1rem;
+      text-align: center;
+      color: #2C2C2C;
+    }
+
+    .form-group {
+      margin-bottom: 1.2rem;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 0.65rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: #8A8478;
+      margin-bottom: 0.5rem;
+      font-weight: 400;
+    }
+
+    .form-group input[type="text"],
+    .form-group input[type="number"] {
+      width: 100%;
+      padding: 0.75rem 0;
+      border: none;
+      border-bottom: 1px solid #D5D0CA;
+      background: transparent;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 1rem;
+      font-weight: 300;
+      color: #2C2C2C;
+      outline: none;
+      transition: border-color 0.2s ease;
+      -webkit-appearance: none;
+      border-radius: 0;
+    }
+
+    .form-group input:focus {
+      border-bottom-color: #C5A46D;
+    }
+
+    .form-group input::placeholder {
+      color: #C5C0B8;
+    }
+
+    .radio-group {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .radio-option {
+      flex: 1;
+    }
+
+    .radio-option input[type="radio"] {
+      display: none;
+    }
+
+    .radio-option label {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.7rem 0.5rem;
+      border: 1px solid #D5D0CA;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-weight: 400;
+      letter-spacing: 0.05em;
+      color: #8A8478;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-transform: none;
+      min-height: 44px;
+    }
+
+    .radio-option input[type="radio"]:checked + label {
+      border-color: #C5A46D;
+      color: #2C2C2C;
+      background: rgba(197, 164, 109, 0.08);
+    }
+
+    .btn-add {
+      width: 100%;
+      padding: 0.9rem;
+      border: 1px solid #2C2C2C;
+      background: #2C2C2C;
+      color: #FAF8F5;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.75rem;
+      font-weight: 400;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      margin-top: 0.5rem;
+      min-height: 44px;
+    }
+
+    .btn-add:active {
+      opacity: 0.7;
+    }
+
+    /* Delivery List */
+    .delivery-list {
+      margin-top: 1rem;
+    }
+
+    .delivery-item {
+      padding: 1.2rem 0;
+      border-bottom: 1px solid #E8E4DF;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+
+    .delivery-info {
+      flex: 1;
+    }
+
+    .delivery-name {
+      font-family: 'Playfair Display', serif;
+      font-size: 1rem;
+      font-weight: 400;
+      margin-bottom: 0.3rem;
+    }
+
+    .delivery-details {
+      font-size: 0.78rem;
+      color: #8A8478;
+      font-weight: 300;
+      line-height: 1.6;
+    }
+
+    .delivery-date {
+      font-size: 0.65rem;
+      color: #A3A88E;
+      letter-spacing: 0.05em;
+      margin-top: 0.3rem;
+    }
+
+    .btn-delete {
+      background: none;
+      border: none;
+      color: #C5C0B8;
+      font-size: 1.1rem;
+      cursor: pointer;
+      padding: 0.3rem;
+      min-width: 44px;
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: color 0.2s ease;
+    }
+
+    .btn-delete:active {
+      color: #C4A68A;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: #8A8478;
+      font-size: 0.85rem;
+      line-height: 1.6;
+    }
+
+    .divider {
+      border: none;
+      border-top: 1px solid #E8E4DF;
+      margin: 0.5rem 0;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Baby Deliveries</h1>
+    <p>Delivery Tracker</p>
+  </header>
+
+  <div class="container">
+    <div id="authSection"></div>
+
+    <div class="signin-prompt" id="signinPrompt">
+      <span>Welcome</span>
+      <p>Sign in to track your baby deliveries</p>
+    </div>
+
+    <div id="appContent" style="display:none;">
+
+      <!-- Stats Dashboard -->
+      <div id="statsSection">
+        <div class="stats-grid" id="statsGrid">
+          <div class="stat-card full-width">
+            <div class="stat-value" id="statTotal">0</div>
+            <div class="stat-label">Total Deliveries</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="statBoys">0</div>
+            <div class="stat-label">Boys</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="statGirls">0</div>
+            <div class="stat-label">Girls</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="statVaginal">0</div>
+            <div class="stat-label">Vaginal</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="statCsection">0</div>
+            <div class="stat-label">C-Section</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="statBiggest">--</div>
+            <div class="stat-label">Biggest</div>
+            <div class="stat-detail" id="statBiggestName"></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="statSmallest">--</div>
+            <div class="stat-label">Smallest</div>
+            <div class="stat-detail" id="statSmallestName"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Add New Delivery Form -->
+      <div class="section-title">Record Delivery</div>
+
+      <form id="deliveryForm">
+        <div class="form-group">
+          <label for="babyName">Baby's Name</label>
+          <input type="text" id="babyName" placeholder="First name" autocomplete="off">
+        </div>
+
+        <div class="form-group">
+          <label>Gender</label>
+          <div class="radio-group">
+            <div class="radio-option">
+              <input type="radio" id="genderBoy" name="gender" value="Boy">
+              <label for="genderBoy">Boy</label>
+            </div>
+            <div class="radio-option">
+              <input type="radio" id="genderGirl" name="gender" value="Girl">
+              <label for="genderGirl">Girl</label>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Weight</label>
+          <div style="display:flex; gap:0.8rem; align-items:flex-end;">
+            <div style="flex:1;">
+              <input type="number" id="weightLbs" placeholder="lbs" min="0" max="20" inputmode="numeric">
+            </div>
+            <div style="flex:1;">
+              <input type="number" id="weightOz" placeholder="oz" min="0" max="15" step="0.1" inputmode="decimal">
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Route of Delivery</label>
+          <div class="radio-group">
+            <div class="radio-option">
+              <input type="radio" id="routeVaginal" name="route" value="Vaginal">
+              <label for="routeVaginal">Vaginal</label>
+            </div>
+            <div class="radio-option">
+              <input type="radio" id="routeCsection" name="route" value="C-Section">
+              <label for="routeCsection">C-Section</label>
+            </div>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-add">Add Delivery</button>
+      </form>
+
+      <!-- Delivery List -->
+      <div class="section-title" id="listTitle" style="display:none;">All Deliveries</div>
+      <div class="delivery-list" id="deliveryList"></div>
+
+    </div>
+  </div>
+
+  <script>
+    const storage = new GoogleDriveStorage('baby-deliveries-data.json');
+    let deliveries = [];
+
+    document.getElementById('gds-styles').textContent = GoogleDriveStorage.getStyles();
+
+    storage.renderAuthUI(document.getElementById('authSection'), {
+      onSignIn: async () => {
+        const data = await storage.loadFromDrive();
+        deliveries = (data && Array.isArray(data)) ? data : [];
+        document.getElementById('signinPrompt').style.display = 'none';
+        document.getElementById('appContent').style.display = 'block';
+        render();
+      },
+      onSignOut: () => {
+        deliveries = [];
+        document.getElementById('signinPrompt').style.display = 'block';
+        document.getElementById('appContent').style.display = 'none';
+      }
+    });
+
+    document.getElementById('deliveryForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+
+      const name = document.getElementById('babyName').value.trim();
+      const gender = document.querySelector('input[name="gender"]:checked');
+      const lbs = document.getElementById('weightLbs').value;
+      const oz = document.getElementById('weightOz').value;
+      const route = document.querySelector('input[name="route"]:checked');
+
+      if (!name || !gender || !lbs || !route) return;
+
+      const delivery = {
+        id: Date.now().toString(),
+        name: name,
+        gender: gender.value,
+        weightLbs: parseInt(lbs),
+        weightOz: parseFloat(oz) || 0,
+        route: route.value,
+        date: new Date().toISOString()
+      };
+
+      deliveries.unshift(delivery);
+      storage.save(deliveries);
+      render();
+
+      // Reset form
+      this.reset();
+    });
+
+    function formatWeight(lbs, oz) {
+      const ozStr = oz % 1 === 0 ? oz.toString() : oz.toFixed(1);
+      return lbs + ' lbs ' + ozStr + ' oz';
+    }
+
+    function totalOunces(lbs, oz) {
+      return lbs * 16 + oz;
+    }
+
+    function updateStats() {
+      const total = deliveries.length;
+      const boys = deliveries.filter(d => d.gender === 'Boy').length;
+      const girls = deliveries.filter(d => d.gender === 'Girl').length;
+      const vaginal = deliveries.filter(d => d.route === 'Vaginal').length;
+      const csection = deliveries.filter(d => d.route === 'C-Section').length;
+
+      document.getElementById('statTotal').textContent = total;
+      document.getElementById('statBoys').textContent = boys;
+      document.getElementById('statGirls').textContent = girls;
+      document.getElementById('statVaginal').textContent = vaginal;
+      document.getElementById('statCsection').textContent = csection;
+
+      if (total > 0) {
+        let biggest = deliveries[0], smallest = deliveries[0];
+        deliveries.forEach(d => {
+          if (totalOunces(d.weightLbs, d.weightOz) > totalOunces(biggest.weightLbs, biggest.weightOz)) biggest = d;
+          if (totalOunces(d.weightLbs, d.weightOz) < totalOunces(smallest.weightLbs, smallest.weightOz)) smallest = d;
+        });
+        document.getElementById('statBiggest').textContent = formatWeight(biggest.weightLbs, biggest.weightOz);
+        document.getElementById('statBiggestName').textContent = biggest.name;
+        document.getElementById('statSmallest').textContent = formatWeight(smallest.weightLbs, smallest.weightOz);
+        document.getElementById('statSmallestName').textContent = smallest.name;
+      } else {
+        document.getElementById('statBiggest').textContent = '--';
+        document.getElementById('statSmallest').textContent = '--';
+        document.getElementById('statBiggestName').textContent = '';
+        document.getElementById('statSmallestName').textContent = '';
+      }
+    }
+
+    function renderList() {
+      const list = document.getElementById('deliveryList');
+      const title = document.getElementById('listTitle');
+
+      if (deliveries.length === 0) {
+        title.style.display = 'none';
+        list.innerHTML = '<div class="empty-state">No deliveries recorded yet.<br>Add your first one above.</div>';
+        return;
+      }
+
+      title.style.display = 'block';
+      list.innerHTML = deliveries.map(d => {
+        const date = new Date(d.date);
+        const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        return '<div class="delivery-item">' +
+          '<div class="delivery-info">' +
+            '<div class="delivery-name">' + escapeHtml(d.name) + '</div>' +
+            '<div class="delivery-details">' +
+              d.gender + ' &middot; ' + formatWeight(d.weightLbs, d.weightOz) + ' &middot; ' + d.route +
+            '</div>' +
+            '<div class="delivery-date">' + dateStr + '</div>' +
+          '</div>' +
+          '<button class="btn-delete" onclick="deleteDelivery(\'' + d.id + '\')" aria-label="Delete">&times;</button>' +
+        '</div>';
+      }).join('');
+    }
+
+    function deleteDelivery(id) {
+      deliveries = deliveries.filter(d => d.id !== id);
+      storage.save(deliveries);
+      render();
+    }
+
+    function render() {
+      updateStats();
+      renderList();
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+  </script>
+</body>
+</html>
