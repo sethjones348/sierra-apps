@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Outdoor Hours — Album</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="/sierra-apps/shared/config.js"></script>
+  <script src="/sierra-apps/shared/google-drive-storage.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 300;
+      background: #FAF8F5;
+      color: #2C2C2C;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+      padding-bottom: 70px;
+    }
+
+    /* Bottom nav */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #FAF8F5;
+      border-top: 1px solid #E8E4DF;
+      display: flex;
+      justify-content: center;
+      gap: 0;
+      z-index: 50;
+      padding: 0;
+    }
+
+    .nav-item {
+      flex: 1;
+      max-width: 160px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.6rem 0 0.5rem;
+      text-decoration: none;
+      color: #8A8478;
+      font-size: 0.6rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      font-weight: 400;
+      transition: color 0.2s ease;
+      min-height: 44px;
+      justify-content: center;
+    }
+
+    .nav-item.active { color: #2C2C2C; }
+
+    .nav-item svg {
+      width: 20px;
+      height: 20px;
+      stroke-width: 1.5;
+    }
+
+    header {
+      padding: 2.5rem 1.5rem 1.5rem;
+      text-align: center;
+      border-bottom: 1px solid #E8E4DF;
+    }
+
+    header h1 {
+      font-family: 'Playfair Display', serif;
+      font-weight: 400;
+      font-size: 1.6rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    header p {
+      color: #8A8478;
+      font-size: 0.8rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      font-weight: 400;
+      margin-top: 0.3rem;
+    }
+
+    .container {
+      max-width: 500px;
+      margin: 0 auto;
+      padding: 0 1rem 2rem;
+    }
+
+    .auth-section {
+      text-align: center;
+      padding: 1.2rem 0;
+      border-bottom: 1px solid #E8E4DF;
+    }
+
+    .section-title {
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: #8A8478;
+      font-weight: 400;
+      margin-bottom: 1.5rem;
+    }
+
+    /* Gallery grid */
+    .gallery {
+      padding-top: 1.5rem;
+    }
+
+    .gallery-empty {
+      text-align: center;
+      color: #8A8478;
+      font-size: 0.85rem;
+      padding: 3rem 0;
+    }
+
+    .gallery-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.75rem;
+    }
+
+    .gallery-card {
+      position: relative;
+      border-radius: 8px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: opacity 0.2s ease;
+    }
+
+    .gallery-card:active { opacity: 0.8; }
+
+    .gallery-card img {
+      width: 100%;
+      aspect-ratio: 1;
+      object-fit: cover;
+      display: block;
+    }
+
+    .gallery-card-info {
+      padding: 0.5rem 0.4rem;
+    }
+
+    .gallery-card-date {
+      font-size: 0.7rem;
+      color: #8A8478;
+      letter-spacing: 0.05em;
+    }
+
+    .gallery-card-caption {
+      font-size: 0.75rem;
+      color: #2C2C2C;
+      margin-top: 0.15rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Lightbox */
+    .lightbox {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(44, 44, 44, 0.92);
+      z-index: 200;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+
+    .lightbox.open { display: flex; }
+
+    .lightbox img {
+      max-width: 100%;
+      max-height: 70vh;
+      border-radius: 8px;
+      object-fit: contain;
+    }
+
+    .lightbox-info {
+      text-align: center;
+      color: #FAF8F5;
+      margin-top: 1rem;
+    }
+
+    .lightbox-date {
+      font-size: 0.75rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      opacity: 0.7;
+    }
+
+    .lightbox-caption {
+      font-size: 0.9rem;
+      margin-top: 0.3rem;
+    }
+
+    .lightbox-actions {
+      display: flex;
+      gap: 1.5rem;
+      margin-top: 1.2rem;
+    }
+
+    .lightbox-btn {
+      font-family: 'DM Sans', sans-serif;
+      background: none;
+      border: 1px solid rgba(250, 248, 245, 0.4);
+      color: #FAF8F5;
+      font-size: 0.7rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 0.6rem 1.5rem;
+      border-radius: 30px;
+      cursor: pointer;
+      min-height: 44px;
+      transition: all 0.2s ease;
+    }
+
+    .lightbox-btn:active { opacity: 0.6; }
+
+    .lightbox-btn-delete {
+      border-color: #C4A68A;
+      color: #C4A68A;
+    }
+
+    .lightbox-close {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      background: none;
+      border: none;
+      color: #FAF8F5;
+      font-size: 1.8rem;
+      cursor: pointer;
+      min-width: 44px;
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0.7;
+    }
+
+    .lightbox-close:active { opacity: 0.4; }
+
+    /* Month group headers */
+    .month-header {
+      font-family: 'Playfair Display', serif;
+      font-weight: 400;
+      font-size: 1rem;
+      letter-spacing: 0.06em;
+      margin: 2rem 0 0.8rem;
+      padding-bottom: 0.4rem;
+      border-bottom: 1px solid #E8E4DF;
+    }
+
+    .month-header:first-child { margin-top: 0; }
+  </style>
+  <style id="gds-styles"></style>
+</head>
+<body>
+  <header>
+    <h1>Photo Album</h1>
+    <p>Moments outdoors</p>
+  </header>
+
+  <div class="container">
+    <div class="auth-section" id="authSection"></div>
+    <div class="gallery" id="gallery">
+      <div class="gallery-empty">No photos yet. Add one from the Tracker page.</div>
+    </div>
+  </div>
+
+  <!-- Lightbox -->
+  <div class="lightbox" id="lightbox" onclick="closeLightbox(event)">
+    <button class="lightbox-close" onclick="closeLightbox()">&times;</button>
+    <img id="lightboxImg" src="" alt="Photo">
+    <div class="lightbox-info">
+      <div class="lightbox-date" id="lightboxDate"></div>
+      <div class="lightbox-caption" id="lightboxCaption"></div>
+    </div>
+    <div class="lightbox-actions">
+      <button class="lightbox-btn" onclick="closeLightbox()">Close</button>
+      <button class="lightbox-btn lightbox-btn-delete" id="lightboxDeleteBtn" onclick="deletePhoto()">Delete</button>
+    </div>
+  </div>
+
+  <!-- Bottom nav -->
+  <nav class="bottom-nav">
+    <a href="/sierra-apps/" class="nav-item">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0h4"/></svg>
+      Home
+    </a>
+    <a href="/sierra-apps/apps/outdoor-hours-tracker/" class="nav-item">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      Tracker
+    </a>
+    <a href="/sierra-apps/apps/outdoor-hours-tracker/album.html" class="nav-item active">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+      Album
+    </a>
+  </nav>
+
+  <script>
+    const photoStorage = new GoogleDriveStorage('outdoor-hours-photos.json', 'outdoor-hours-photos');
+    let photos = [];
+    let currentPhotoId = null;
+
+    document.getElementById('gds-styles').textContent = GoogleDriveStorage.getStyles();
+
+    photoStorage.renderAuthUI(document.getElementById('authSection'), {
+      onSignIn: async () => {
+        photos = await photoStorage.syncFromDrive(photos, mergePhotos);
+        renderGallery();
+      },
+      onSignOut: () => {}
+    });
+
+    function mergePhotos(local, remote) {
+      if (!Array.isArray(remote)) return local || [];
+      const map = new Map();
+      (remote || []).forEach(p => map.set(p.id, p));
+      (local || []).forEach(p => map.set(p.id, p));
+      return Array.from(map.values()).sort((a, b) => {
+        if (a.date !== b.date) return b.date.localeCompare(a.date);
+        return b.id - a.id;
+      });
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    function renderGallery() {
+      const gallery = document.getElementById('gallery');
+
+      if (photos.length === 0) {
+        gallery.innerHTML = '<div class="gallery-empty">No photos yet. Add one from the Tracker page.</div>';
+        return;
+      }
+
+      // Group by month
+      const groups = new Map();
+      photos.forEach(p => {
+        const key = p.date.slice(0, 7); // YYYY-MM
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(p);
+      });
+
+      let html = '';
+      groups.forEach((items, monthKey) => {
+        const d = new Date(monthKey + '-15');
+        const label = d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+        html += '<div class="month-header">' + label + '</div>';
+        html += '<div class="gallery-grid">';
+        items.forEach(p => {
+          const dateObj = new Date(p.date + 'T12:00:00');
+          const formatted = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+          html += '<div class="gallery-card" onclick="openLightbox(' + JSON.stringify(p.id) + ')">' +
+            '<img src="' + p.dataUrl + '" alt="' + escapeHtml(p.caption || 'Photo') + '">' +
+            '<div class="gallery-card-info">' +
+              '<div class="gallery-card-date">' + formatted + '</div>' +
+              (p.caption ? '<div class="gallery-card-caption">' + escapeHtml(p.caption) + '</div>' : '') +
+            '</div>' +
+          '</div>';
+        });
+        html += '</div>';
+      });
+
+      gallery.innerHTML = html;
+    }
+
+    function openLightbox(id) {
+      const photo = photos.find(p => p.id === id);
+      if (!photo) return;
+      currentPhotoId = id;
+      document.getElementById('lightboxImg').src = photo.dataUrl;
+      const dateObj = new Date(photo.date + 'T12:00:00');
+      document.getElementById('lightboxDate').textContent = dateObj.toLocaleDateString('en-US', {
+        month: 'long', day: 'numeric', year: 'numeric'
+      });
+      document.getElementById('lightboxCaption').textContent = photo.caption || '';
+      document.getElementById('lightbox').classList.add('open');
+    }
+
+    function closeLightbox(e) {
+      if (e && e.target !== document.getElementById('lightbox')) return;
+      document.getElementById('lightbox').classList.remove('open');
+      currentPhotoId = null;
+    }
+
+    function deletePhoto() {
+      if (!currentPhotoId) return;
+      if (!confirm('Delete this photo?')) return;
+      photos = photos.filter(p => p.id !== currentPhotoId);
+      photoStorage.save(photos);
+      document.getElementById('lightbox').classList.remove('open');
+      currentPhotoId = null;
+      renderGallery();
+    }
+
+    // Init
+    photos = photoStorage.loadLocal() || [];
+    renderGallery();
+  </script>
+</body>
+</html>
