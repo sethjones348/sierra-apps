@@ -73,9 +73,6 @@ class GoogleDriveStorage {
 
     container.querySelector('#gds-signin-btn').addEventListener('click', () => this.signIn());
     container.querySelector('#gds-signout-btn').addEventListener('click', () => this.signOut());
-    container.querySelector('#gds-sync-status').addEventListener('click', () => {
-      if (this._needsReconnect) this._reconnect();
-    });
 
     this._initAuth();
   }
@@ -109,7 +106,6 @@ class GoogleDriveStorage {
       .gds-signout-btn:active { opacity: 0.5; }
       .gds-sync-status { font-size: 0.65rem; color: #A3A88E; letter-spacing: 0.08em; margin-top: 0.4rem; text-align: center; min-height: 44px; display: flex; align-items: center; justify-content: center; }
       .gds-sync-status.error { color: #C4A68A; }
-      .gds-sync-status.reconnect { color: #C5A46D; cursor: pointer; text-decoration: underline; }
     `;
   }
 
@@ -135,14 +131,15 @@ class GoogleDriveStorage {
       callback: (response) => this._handleTokenResponse(response),
     });
 
-    // Try restoring cached session (show UI only — no popup on load)
+    // Try restoring cached session — auto-reconnect silently
     const cached = localStorage.getItem(this._userCacheKey);
     if (cached) {
       try {
         this.currentUser = JSON.parse(cached);
         this._showSignedIn();
-        this._setSyncStatus('Tap to reconnect to Google Drive', false, true);
-        this._needsReconnect = true;
+        this._setSyncStatus('Reconnecting...');
+        // Silent token refresh (no popup) — keeps session alive across page navigations
+        this.tokenClient.requestAccessToken({ prompt: '' });
       } catch (e) {
         localStorage.removeItem(this._userCacheKey);
       }
@@ -157,13 +154,6 @@ class GoogleDriveStorage {
     this.tokenClient.requestAccessToken({ prompt: 'consent' });
   }
 
-  _reconnect() {
-    if (!this.tokenClient) return;
-    this._needsReconnect = false;
-    this._setSyncStatus('Reconnecting...');
-    this.tokenClient.requestAccessToken({ prompt: '' });
-  }
-
   signOut() {
     if (this.accessToken) {
       google.accounts.oauth2.revoke(this.accessToken);
@@ -171,7 +161,6 @@ class GoogleDriveStorage {
     this.accessToken = null;
     this.driveFileId = null;
     this.currentUser = null;
-    this._needsReconnect = false;
     localStorage.removeItem(this._userCacheKey);
     this._showSignedOut();
     this._setSyncStatus('');
@@ -226,12 +215,12 @@ class GoogleDriveStorage {
     this.authContainer.querySelector('#gds-signed-in').style.display = 'none';
   }
 
-  _setSyncStatus(msg, isError, isReconnect) {
+  _setSyncStatus(msg, isError) {
     if (!this.authContainer) return;
     const el = this.authContainer.querySelector('#gds-sync-status');
     if (el) {
       el.textContent = msg;
-      el.className = 'gds-sync-status' + (isError ? ' error' : '') + (isReconnect ? ' reconnect' : '');
+      el.className = 'gds-sync-status' + (isError ? ' error' : '');
     }
     if (this.callbacks.onSyncStatus) this.callbacks.onSyncStatus(msg, isError);
   }
