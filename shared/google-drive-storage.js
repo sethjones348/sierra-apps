@@ -22,6 +22,7 @@ class GoogleDriveStorage {
     this.callbacks = {};
     this._userCacheKey = 'gds-auth-user';
     this._tokenCacheKey = 'gds-auth-token';
+    this._fileIdCacheKey = 'gds-file-' + fileName;
   }
 
   // =============================================
@@ -86,12 +87,57 @@ class GoogleDriveStorage {
   // =============================================
 
   _initAuth() {
-    if (typeof google === 'undefined' || !google.accounts) {
-      setTimeout(() => this._initAuth(), 200);
+    // Try to restore session from cached token immediately (no GIS library needed)
+    var cachedUser = null;
+    var cachedToken = null;
+    try {
+      var userRaw = localStorage.getItem(this._userCacheKey);
+      var tokenRaw = localStorage.getItem(this._tokenCacheKey);
+      if (userRaw) cachedUser = JSON.parse(userRaw);
+      if (tokenRaw) cachedToken = JSON.parse(tokenRaw);
+    } catch (e) {
+      localStorage.removeItem(this._userCacheKey);
+      localStorage.removeItem(this._tokenCacheKey);
+    }
+
+    // Restore cached Drive file ID
+    var cachedFileId = localStorage.getItem(this._fileIdCacheKey);
+    if (cachedFileId) this.driveFileId = cachedFileId;
+
+    if (cachedUser && cachedToken && cachedToken.expiresAt > Date.now()) {
+      // Cached token is still valid — use it directly, no auth request needed
+      this.accessToken = cachedToken.accessToken;
+      this.currentUser = cachedUser;
+      this._showSignedIn();
+      if (this.callbacks.onSignIn) this.callbacks.onSignIn();
+      // Set up GIS in background for sign-out button
+      this._initGIS();
       return;
     }
 
-    const clientId = (window.SIERRA_CONFIG && window.SIERRA_CONFIG.GOOGLE_CLIENT_ID) || '';
+    if (cachedUser && cachedToken) {
+      // User was signed in but token expired — need GIS for silent refresh
+      this.currentUser = cachedUser;
+      this._showSignedIn();
+      this._setSyncStatus('Connecting...');
+      this._pendingSilentRefresh = true;
+      this._initGIS();
+      return;
+    }
+
+    // No cached session — need GIS for sign-in button
+    localStorage.removeItem(this._userCacheKey);
+    localStorage.removeItem(this._tokenCacheKey);
+    this._initGIS();
+  }
+
+  _initGIS() {
+    if (typeof google === 'undefined' || !google.accounts) {
+      setTimeout(() => this._initGIS(), 200);
+      return;
+    }
+
+    var clientId = (window.SIERRA_CONFIG && window.SIERRA_CONFIG.GOOGLE_CLIENT_ID) || '';
     if (!clientId || clientId === 'YOUR_CLIENT_ID_HERE') {
       this._setSyncStatus('Google Client ID not configured', true);
       return;
@@ -103,42 +149,12 @@ class GoogleDriveStorage {
       callback: (response) => this._handleTokenResponse(response),
     });
 
-    // Try to restore session from cached token
-    var cachedUser = null;
-    var cachedToken = null;
-    try {
-      var userRaw = localStorage.getItem(this._userCacheKey);
-      var tokenRaw = localStorage.getItem(this._tokenCacheKey);
-      if (userRaw) cachedUser = JSON.parse(userRaw);
-      if (tokenRaw) cachedToken = JSON.parse(tokenRaw);
-    } catch (e) {
-      // Corrupt cache — clear it
-      localStorage.removeItem(this._userCacheKey);
-      localStorage.removeItem(this._tokenCacheKey);
-    }
-
-    if (cachedUser && cachedToken && cachedToken.expiresAt > Date.now()) {
-      // Cached token is still valid — use it directly, no auth request needed
-      this.accessToken = cachedToken.accessToken;
-      this.currentUser = cachedUser;
-      this._showSignedIn();
-      if (this.callbacks.onSignIn) this.callbacks.onSignIn();
-      return;
-    }
-
-    if (cachedUser && cachedToken) {
-      // User was signed in but token expired — try silent refresh
-      this.currentUser = cachedUser;
-      this._showSignedIn();
-      this._setSyncStatus('Connecting...');
+    // If we were waiting to do a silent refresh, do it now
+    if (this._pendingSilentRefresh) {
+      this._pendingSilentRefresh = false;
       this._silentRefresh = true;
       this.tokenClient.requestAccessToken({ prompt: '' });
-      return;
     }
-
-    // No cached session — show sign-in button
-    localStorage.removeItem(this._userCacheKey);
-    localStorage.removeItem(this._tokenCacheKey);
   }
 
   signIn() {
@@ -159,6 +175,7 @@ class GoogleDriveStorage {
     this.currentUser = null;
     localStorage.removeItem(this._userCacheKey);
     localStorage.removeItem(this._tokenCacheKey);
+    localStorage.removeItem(this._fileIdCacheKey);
     this._showSignedOut();
     this._setSyncStatus('');
     if (this.callbacks.onSignOut) this.callbacks.onSignOut();
@@ -258,6 +275,7 @@ class GoogleDriveStorage {
         await this._updateDriveFile(this.driveFileId, data);
       } else {
         this.driveFileId = await this._createDriveFile(data);
+        localStorage.setItem(this._fileIdCacheKey, this.driveFileId);
       }
       this._setSyncStatus('Saved');
     } catch (e) {
@@ -343,7 +361,13 @@ class GoogleDriveStorage {
     this._setSyncStatus('Loading...');
 
     try {
-      this.driveFileId = await this._findDriveFile();
+      // Use cached file ID if available, otherwise search for it
+      if (!this.driveFileId) {
+        this.driveFileId = await this._findDriveFile();
+        if (this.driveFileId) {
+          localStorage.setItem(this._fileIdCacheKey, this.driveFileId);
+        }
+      }
 
       if (this.driveFileId) {
         var data = await this._readDriveFile(this.driveFileId);
@@ -358,6 +382,12 @@ class GoogleDriveStorage {
       if (e.message === 'token_expired') {
         this._onTokenExpired();
       } else {
+        // If cached file ID was stale, clear it and retry once
+        if (this.driveFileId && localStorage.getItem(this._fileIdCacheKey)) {
+          localStorage.removeItem(this._fileIdCacheKey);
+          this.driveFileId = null;
+          return this.loadFromDrive();
+        }
         this._setSyncStatus('Failed to load', true);
       }
       return null;
