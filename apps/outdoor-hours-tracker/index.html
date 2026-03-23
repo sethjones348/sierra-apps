@@ -446,6 +446,15 @@
 
     .photo-input { display: none; }
 
+    .photo-buttons {
+      display: flex;
+      gap: 0.8rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .photo-buttons .btn { min-width: 140px; }
+
     .photo-preview-row {
       display: none;
       flex-direction: column;
@@ -477,6 +486,43 @@
     }
 
     .photo-btn-row .btn { min-width: 100px; }
+
+    /* History photo button */
+    .history-photo-btn {
+      background: none;
+      border: none;
+      color: #A3A88E;
+      cursor: pointer;
+      padding: 0.3rem;
+      min-width: 44px;
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.2s ease;
+    }
+
+    .history-photo-btn:active { opacity: 0.5; }
+
+    .history-photo-btn svg {
+      width: 16px;
+      height: 16px;
+      stroke-width: 1.5;
+    }
+
+    .history-photos {
+      display: flex;
+      gap: 0.4rem;
+      margin-top: 0.4rem;
+      flex-wrap: wrap;
+    }
+
+    .history-thumb {
+      width: 36px;
+      height: 36px;
+      border-radius: 4px;
+      object-fit: cover;
+    }
 
     /* Back link */
     .back-link {
@@ -585,8 +631,13 @@
     <!-- Add photo -->
     <div class="photo-section">
       <div class="section-title">Capture a Moment</div>
-      <button class="btn" onclick="document.getElementById('photoInput').click()">Add Photo</button>
-      <input type="file" accept="image/*" capture="environment" id="photoInput" class="photo-input" onchange="handlePhotoSelect(event)">
+      <div class="photo-buttons">
+        <button class="btn" onclick="document.getElementById('photoCameraInput').click()">Take Photo</button>
+        <button class="btn" onclick="document.getElementById('photoLibraryInput').click()">From Library</button>
+      </div>
+      <input type="file" accept="image/*" capture="environment" id="photoCameraInput" class="photo-input" onchange="handlePhotoSelect(event)">
+      <input type="file" accept="image/*" id="photoLibraryInput" class="photo-input" onchange="handlePhotoSelect(event)">
+      <input type="file" accept="image/*" id="photoEntryInput" class="photo-input" onchange="handlePhotoSelect(event)">
       <div class="photo-preview-row" id="photoPreviewRow">
         <img id="photoPreviewImg" class="photo-preview-img" src="" alt="Preview">
         <div class="photo-meta">
@@ -652,6 +703,7 @@
     storage.renderAuthUI(document.getElementById('authSection'), {
       onSignIn: async () => {
         entries = await storage.syncFromDrive(entries, mergeEntries);
+        photos = await photoStorage.syncFromDrive(photos, mergePhotos);
         renderAll();
       },
       onSignOut: () => {}
@@ -662,6 +714,17 @@
       const map = new Map();
       (remote || []).forEach(e => map.set(e.id, e));
       (local || []).forEach(e => map.set(e.id, e));
+      return Array.from(map.values()).sort((a, b) => {
+        if (a.date !== b.date) return b.date.localeCompare(a.date);
+        return b.id - a.id;
+      });
+    }
+
+    function mergePhotos(local, remote) {
+      if (!Array.isArray(remote)) return local || [];
+      const map = new Map();
+      (remote || []).forEach(p => map.set(p.id, p));
+      (local || []).forEach(p => map.set(p.id, p));
       return Array.from(map.values()).sort((a, b) => {
         if (a.date !== b.date) return b.date.localeCompare(a.date);
         return b.id - a.id;
@@ -815,6 +878,10 @@
         (weekTotal < 10 ? weekTotal.toFixed(1) : Math.round(weekTotal)) + ' hrs this week';
     }
 
+    function getPhotosForDate(date) {
+      return photos.filter(p => p.date === date);
+    }
+
     function renderHistory() {
       const list = document.getElementById('historyList');
       const clearRow = document.getElementById('clearAllRow');
@@ -839,13 +906,24 @@
           ? '<div class="history-note">' + escapeHtml(e.note) + '</div>'
           : '';
 
+        const datePhotos = getPhotosForDate(e.date);
+        const thumbsHtml = datePhotos.length > 0
+          ? '<div class="history-photos">' +
+              datePhotos.map(p => '<img class="history-thumb" src="' + p.dataUrl + '" alt="">').join('') +
+            '</div>'
+          : '';
+
         return '<div class="history-item">' +
           '<div class="history-item-left">' +
             '<div class="history-date">' + formatted + '</div>' +
             noteHtml +
+            thumbsHtml +
           '</div>' +
           '<div class="history-item-right">' +
             '<div class="history-duration">' + hoursStr + '</div>' +
+            '<button class="history-photo-btn" onclick="addPhotoForDate(\'' + e.date + '\')" title="Add photo">' +
+              '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>' +
+            '</button>' +
             '<button class="delete-btn" onclick="deleteEntry(' + e.id + ')">&times;</button>' +
           '</div>' +
         '</div>';
@@ -949,6 +1027,7 @@
     const photoStorage = new GoogleDriveStorage('outdoor-hours-photos.json', 'outdoor-hours-photos');
     let photos = [];
     let pendingPhotoData = null;
+    let pendingPhotoDate = null;
 
     function resizeImage(file, maxWidth, callback) {
       const reader = new FileReader();
@@ -972,6 +1051,11 @@
       reader.readAsDataURL(file);
     }
 
+    function addPhotoForDate(date) {
+      pendingPhotoDate = date;
+      document.getElementById('photoEntryInput').click();
+    }
+
     function handlePhotoSelect(event) {
       const file = event.target.files[0];
       if (!file) return;
@@ -979,15 +1063,21 @@
         pendingPhotoData = dataUrl;
         document.getElementById('photoPreviewImg').src = dataUrl;
         document.getElementById('photoPreviewRow').classList.add('has-photo');
-        document.getElementById('photoDate').value = new Date().toISOString().slice(0, 10);
+        document.getElementById('photoDate').value = pendingPhotoDate || new Date().toISOString().slice(0, 10);
         document.getElementById('photoCaption').value = '';
+        pendingPhotoDate = null;
+        // Scroll to the preview
+        document.getElementById('photoPreviewRow').scrollIntoView({ behavior: 'smooth', block: 'center' });
       });
     }
 
     function cancelPhoto() {
       pendingPhotoData = null;
+      pendingPhotoDate = null;
       document.getElementById('photoPreviewRow').classList.remove('has-photo');
-      document.getElementById('photoInput').value = '';
+      document.getElementById('photoCameraInput').value = '';
+      document.getElementById('photoLibraryInput').value = '';
+      document.getElementById('photoEntryInput').value = '';
     }
 
     function savePhoto() {
@@ -1006,6 +1096,7 @@
       });
       photoStorage.save(photos);
       cancelPhoto();
+      renderHistory();
     }
 
     // --- Init ---
