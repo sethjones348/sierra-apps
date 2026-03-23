@@ -1,43 +1,22 @@
 /**
  * Google Drive Storage — shared helper for Sierra Apps.
  *
- * Provides Google Sign-In + Google Drive appDataFolder storage.
- * Each app gets its own file in the user's hidden appDataFolder.
+ * Google Drive is the single source of truth.
+ * You must sign in to see your data. Sign out to hide it.
  *
  * Dependencies:
  *   1. <script src="https://accounts.google.com/gsi/client" async defer></script>
  *   2. <script src="/sierra-apps/shared/config.js"></script>
  *   3. <script src="/sierra-apps/shared/google-drive-storage.js"></script>
- *
- * Usage:
- *   const storage = new GoogleDriveStorage('my-app-data.json');
- *
- *   // Render auth UI
- *   storage.renderAuthUI(document.getElementById('authContainer'), {
- *     onSignIn: () => { ... },
- *     onSignOut: () => { ... },
- *     onSyncStatus: (msg, isError) => { ... }
- *   });
- *
- *   // Save data (saves locally + syncs to Drive if signed in)
- *   await storage.save(myDataObject);
- *
- *   // Load data (loads from local, then merges with Drive if signed in)
- *   const data = storage.loadLocal();
- *
- *   // Sync from Drive (call after sign-in)
- *   const driveData = await storage.syncFromDrive();
  */
 
 class GoogleDriveStorage {
-  constructor(fileName, localStorageKey) {
+  constructor(fileName) {
     this.fileName = fileName;
-    this.localStorageKey = localStorageKey || fileName.replace('.json', '');
     this.accessToken = null;
     this.driveFileId = null;
     this.tokenClient = null;
     this.currentUser = null;
-    this.isSyncing = false;
     this.callbacks = {};
     this._userCacheKey = 'gds-auth-user';
   }
@@ -46,10 +25,6 @@ class GoogleDriveStorage {
   // Auth UI
   // =============================================
 
-  /**
-   * Renders a sign-in/sign-out UI into the given container element.
-   * callbacks: { onSignIn, onSignOut, onSyncStatus(msg, isError) }
-   */
   renderAuthUI(container, callbacks) {
     this.callbacks = callbacks || {};
     this.authContainer = container;
@@ -60,7 +35,6 @@ class GoogleDriveStorage {
           '<svg viewBox="0 0 24 24" width="18" height="18"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.27-4.74 3.27-8.1z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>' +
           ' Sign in with Google' +
         '</button>' +
-        '<span class="gds-hint">Sync your data across devices</span>' +
       '</div>' +
       '<div class="gds-signed-in" id="gds-signed-in" style="display:none;">' +
         '<div class="gds-user-info">' +
@@ -77,14 +51,9 @@ class GoogleDriveStorage {
     this._initAuth();
   }
 
-  /**
-   * Returns a <style> block with default styles for the auth UI.
-   * Include this in your app's <head> or inline it.
-   */
   static getStyles() {
     return `
       .gds-signed-out { display: flex; flex-direction: column; align-items: center; gap: 0.6rem; }
-      .gds-hint { font-size: 0.7rem; color: #8A8478; letter-spacing: 0.1em; }
       .gds-signin-btn {
         display: inline-flex; align-items: center; gap: 0.6rem;
         font-family: 'DM Sans', sans-serif; font-size: 0.8rem; font-weight: 400;
@@ -131,14 +100,14 @@ class GoogleDriveStorage {
       callback: (response) => this._handleTokenResponse(response),
     });
 
-    // Try restoring cached session — auto-reconnect silently
+    // Try restoring session silently on page load
     const cached = localStorage.getItem(this._userCacheKey);
     if (cached) {
       try {
         this.currentUser = JSON.parse(cached);
         this._showSignedIn();
-        this._setSyncStatus('Reconnecting...');
-        // Silent token refresh (no popup) — keeps session alive across page navigations
+        this._setSyncStatus('Connecting...');
+        this._silentRefresh = true;
         this.tokenClient.requestAccessToken({ prompt: '' });
       } catch (e) {
         localStorage.removeItem(this._userCacheKey);
@@ -148,9 +117,10 @@ class GoogleDriveStorage {
 
   signIn() {
     if (!this.tokenClient) {
-      this._setSyncStatus('Google Sign-In not ready. Please wait...', true);
+      this._setSyncStatus('Google Sign-In not ready', true);
       return;
     }
+    this._silentRefresh = false;
     this.tokenClient.requestAccessToken({ prompt: 'consent' });
   }
 
@@ -168,8 +138,17 @@ class GoogleDriveStorage {
   }
 
   _handleTokenResponse(response) {
+    const wasSilent = this._silentRefresh;
+    this._silentRefresh = false;
+
     if (response.error) {
-      if (response.error === 'access_denied') this.signOut();
+      // If silent restore failed, just show sign-in button (don't revoke anything)
+      if (wasSilent) {
+        this.currentUser = null;
+        localStorage.removeItem(this._userCacheKey);
+        this._showSignedOut();
+        this._setSyncStatus('');
+      }
       return;
     }
 
@@ -222,34 +201,25 @@ class GoogleDriveStorage {
       el.textContent = msg;
       el.className = 'gds-sync-status' + (isError ? ' error' : '');
     }
-    if (this.callbacks.onSyncStatus) this.callbacks.onSyncStatus(msg, isError);
   }
 
   // =============================================
-  // Local storage
-  // =============================================
-
-  loadLocal() {
-    try {
-      const raw = localStorage.getItem(this.localStorageKey);
-      return raw ? JSON.parse(raw) : null;
-    } catch (e) {
-      return null;
-    }
-  }
-
-  saveLocal(data) {
-    localStorage.setItem(this.localStorageKey, JSON.stringify(data));
-  }
-
-  // =============================================
-  // Save (local + Drive)
+  // Save (Drive only)
   // =============================================
 
   async save(data) {
-    this.saveLocal(data);
-    if (this.accessToken) {
-      await this._syncToDrive(data);
+    if (!this.accessToken) return;
+
+    try {
+      if (this.driveFileId) {
+        await this._updateDriveFile(this.driveFileId, data);
+      } else {
+        this.driveFileId = await this._createDriveFile(data);
+      }
+      this._setSyncStatus('Saved');
+    } catch (e) {
+      console.error('Drive save error:', e);
+      this._setSyncStatus('Save failed', true);
     }
   }
 
@@ -261,24 +231,7 @@ class GoogleDriveStorage {
     options = options || {};
     options.headers = options.headers || {};
     options.headers['Authorization'] = 'Bearer ' + this.accessToken;
-    const r = await fetch(url, options);
-    if (r.status === 401) {
-      // Try silent token refresh
-      await new Promise((resolve, reject) => {
-        const oldToken = this.accessToken;
-        this.tokenClient.requestAccessToken({ prompt: '' });
-        const check = setInterval(() => {
-          if (this.accessToken && this.accessToken !== oldToken) {
-            clearInterval(check);
-            resolve();
-          }
-        }, 500);
-        setTimeout(() => { clearInterval(check); reject(new Error('Token refresh timeout')); }, 10000);
-      });
-      options.headers['Authorization'] = 'Bearer ' + this.accessToken;
-      return fetch(url, options);
-    }
-    return r;
+    return fetch(url, options);
   }
 
   async _findDriveFile() {
@@ -322,13 +275,9 @@ class GoogleDriveStorage {
   }
 
   // =============================================
-  // Sync
+  // Load from Drive
   // =============================================
 
-  /**
-   * Load data directly from Drive (Drive as single source of truth).
-   * Returns the data from Drive, or null if no file exists yet.
-   */
   async loadFromDrive() {
     if (!this.accessToken) return null;
     this._setSyncStatus('Loading...');
@@ -338,79 +287,19 @@ class GoogleDriveStorage {
 
       if (this.driveFileId) {
         const data = await this._readDriveFile(this.driveFileId);
-        this._setSyncStatus('Connected to Google Drive');
+        this._setSyncStatus('');
         return data;
       } else {
-        this._setSyncStatus('Connected to Google Drive');
+        this._setSyncStatus('');
         return null;
       }
     } catch (e) {
       console.error('Drive load error:', e);
-      this._setSyncStatus('Failed to load from Drive', true);
+      this._setSyncStatus('Failed to load', true);
       return null;
     }
   }
 
-  /**
-   * Pull data from Drive, merge with provided local data, and return merged result.
-   * Also pushes merged data back to Drive.
-   * mergeFunction(local, remote) should return the merged data.
-   */
-  async syncFromDrive(localData, mergeFunction) {
-    if (!this.accessToken || this.isSyncing) return localData;
-    this.isSyncing = true;
-    this._setSyncStatus('Syncing...');
-
-    try {
-      this.driveFileId = await this._findDriveFile();
-
-      if (this.driveFileId) {
-        const driveData = await this._readDriveFile(this.driveFileId);
-        const merged = mergeFunction ? mergeFunction(localData, driveData) : driveData;
-        this.saveLocal(merged);
-        await this._updateDriveFile(this.driveFileId, merged);
-        this._setSyncStatus('Synced with Google Drive');
-        this.isSyncing = false;
-        return merged;
-      } else {
-        // No file on Drive yet — upload local data
-        if (localData && ((Array.isArray(localData) && localData.length > 0) || (!Array.isArray(localData) && Object.keys(localData).length > 0))) {
-          this.driveFileId = await this._createDriveFile(localData);
-          this._setSyncStatus('Synced with Google Drive');
-        } else {
-          this._setSyncStatus('Connected to Google Drive');
-        }
-        this.isSyncing = false;
-        return localData;
-      }
-    } catch (e) {
-      console.error('Drive sync error:', e);
-      this._setSyncStatus('Sync failed — using local data', true);
-      this.isSyncing = false;
-      return localData;
-    }
-  }
-
-  async _syncToDrive(data) {
-    if (!this.accessToken || this.isSyncing) return;
-    this.isSyncing = true;
-
-    try {
-      if (this.driveFileId) {
-        await this._updateDriveFile(this.driveFileId, data);
-      } else {
-        this.driveFileId = await this._createDriveFile(data);
-      }
-      this._setSyncStatus('Synced with Google Drive');
-    } catch (e) {
-      console.error('Drive save error:', e);
-      this._setSyncStatus('Sync failed — saved locally', true);
-    }
-
-    this.isSyncing = false;
-  }
-
-  /** Returns true if the user is currently signed in with a valid token. */
   isSignedIn() {
     return !!this.accessToken;
   }

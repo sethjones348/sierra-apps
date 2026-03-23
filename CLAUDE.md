@@ -180,7 +180,7 @@ The Google OAuth Client ID is: `437861067044-r6m2ndd5bqgd0u82f1rjq8a3nv91fc3q.ap
 4. In your app's JavaScript, initialize and use:
    ```javascript
    // Each app uses its own unique file name in Drive
-   const storage = new GoogleDriveStorage('my-app-data.json', 'my-app-local-key');
+   const storage = new GoogleDriveStorage('my-app-data.json');
 
    // Inject the auth UI styles
    document.getElementById('gds-styles').textContent = GoogleDriveStorage.getStyles();
