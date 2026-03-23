@@ -8,6 +8,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="/sierra-apps/shared/config.js"></script>
+  <script src="/sierra-apps/shared/google-drive-storage.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -55,98 +57,6 @@
       padding: 1.2rem 0;
       border-bottom: 1px solid #E8E4DF;
     }
-
-    .auth-signed-out {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 0.6rem;
-    }
-
-    .auth-signed-out .auth-hint {
-      font-size: 0.7rem;
-      color: #8A8478;
-      letter-spacing: 0.1em;
-    }
-
-    .google-signin-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.6rem;
-      font-family: 'DM Sans', sans-serif;
-      font-size: 0.8rem;
-      font-weight: 400;
-      letter-spacing: 0.08em;
-      border: 1px solid #D5D0CA;
-      background: #FFFFFF;
-      color: #2C2C2C;
-      padding: 0.65rem 1.5rem;
-      border-radius: 30px;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      min-height: 44px;
-    }
-
-    .google-signin-btn:active {
-      background: #F5F3F0;
-    }
-
-    .google-signin-btn svg {
-      width: 18px;
-      height: 18px;
-    }
-
-    .auth-signed-in {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.8rem;
-    }
-
-    .auth-user-info {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .auth-avatar {
-      width: 28px;
-      height: 28px;
-      border-radius: 50%;
-    }
-
-    .auth-name {
-      font-size: 0.75rem;
-      color: #8A8478;
-      letter-spacing: 0.05em;
-    }
-
-    .auth-signout-btn {
-      font-family: 'DM Sans', sans-serif;
-      font-size: 0.65rem;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      background: none;
-      border: none;
-      color: #C4A68A;
-      cursor: pointer;
-      padding: 0.3rem 0.5rem;
-      min-height: 44px;
-      display: flex;
-      align-items: center;
-      transition: opacity 0.2s ease;
-    }
-
-    .auth-signout-btn:active { opacity: 0.5; }
-
-    .sync-status {
-      font-size: 0.65rem;
-      color: #A3A88E;
-      letter-spacing: 0.08em;
-      margin-top: 0.4rem;
-    }
-
-    .sync-status.error { color: #C4A68A; }
 
     /* Total summary */
     .total-section {
@@ -426,6 +336,7 @@
 
     .back-link:active { opacity: 0.5; }
   </style>
+  <style id="gds-styles"></style>
 </head>
 <body>
   <a class="back-link" href="/sierra-apps/">&larr; Back</a>
@@ -436,23 +347,7 @@
 
   <div class="container">
     <!-- Auth -->
-    <div class="auth-section" id="authSection">
-      <div class="auth-signed-out" id="authSignedOut">
-        <button class="google-signin-btn" onclick="handleSignIn()">
-          <svg viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.27-4.74 3.27-8.1z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
-          Sign in with Google
-        </button>
-        <span class="auth-hint">Sync your data across devices</span>
-      </div>
-      <div class="auth-signed-in" id="authSignedIn" style="display:none;">
-        <div class="auth-user-info">
-          <img class="auth-avatar" id="authAvatar" src="" alt="">
-          <span class="auth-name" id="authName"></span>
-        </div>
-        <button class="auth-signout-btn" onclick="handleSignOut()">Sign Out</button>
-      </div>
-      <div class="sync-status" id="syncStatus"></div>
-    </div>
+    <div class="auth-section" id="authSection"></div>
 
     <!-- Total -->
     <div class="total-section">
@@ -507,309 +402,47 @@
   </div>
 
   <script>
-    // =============================================
-    // CONFIG — Replace with your Google OAuth Client ID
-    // =============================================
-    const GOOGLE_CLIENT_ID = 'YOUR_CLIENT_ID_HERE';
-    const DRIVE_FILE_NAME = 'outdoor-hours-data.json';
-    const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
-
     // --- State ---
-    const STORAGE_KEY = 'outdoor-hours-data';
     let entries = [];
     let stopwatchInterval = null;
     let stopwatchStartTime = null;
     let stopwatchElapsed = 0;
     let stopwatchRunning = false;
 
-    // Google auth state
-    let tokenClient = null;
-    let accessToken = null;
-    let driveFileId = null;
-    let currentUser = null;
-    let isSyncing = false;
+    // --- Google Drive Storage ---
+    const storage = new GoogleDriveStorage('outdoor-hours-data.json', 'outdoor-hours-data');
 
-    // =============================================
-    // Google Auth
-    // =============================================
-    function initGoogleAuth() {
-      if (typeof google === 'undefined' || !google.accounts) {
-        // GIS library not loaded yet, retry
-        setTimeout(initGoogleAuth, 200);
-        return;
-      }
+    // Inject shared auth styles
+    document.getElementById('gds-styles').textContent = GoogleDriveStorage.getStyles();
 
-      tokenClient = google.accounts.oauth2.initTokenClient({
-        client_id: GOOGLE_CLIENT_ID,
-        scope: DRIVE_SCOPE + ' https://www.googleapis.com/auth/userinfo.profile',
-        callback: handleTokenResponse,
-      });
-
-      // Check if we have a cached session
-      const cached = localStorage.getItem('outdoor-hours-user');
-      if (cached) {
-        try {
-          currentUser = JSON.parse(cached);
-          showSignedIn();
-          // Silently try to get a new token
-          tokenClient.requestAccessToken({ prompt: '' });
-        } catch (e) {
-          localStorage.removeItem('outdoor-hours-user');
-        }
-      }
-    }
-
-    function handleSignIn() {
-      if (!tokenClient) {
-        setSyncStatus('Google Sign-In not ready. Please wait...', true);
-        return;
-      }
-      tokenClient.requestAccessToken({ prompt: 'consent' });
-    }
-
-    function handleTokenResponse(response) {
-      if (response.error) {
-        // User cancelled or error — if we had a cached session, clear it
-        if (response.error === 'access_denied') {
-          handleSignOut();
-        }
-        return;
-      }
-
-      accessToken = response.access_token;
-
-      // Fetch user profile
-      fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
-        headers: { Authorization: 'Bearer ' + accessToken }
-      })
-      .then(r => r.json())
-      .then(profile => {
-        currentUser = {
-          name: profile.given_name || profile.name,
-          picture: profile.picture
-        };
-        localStorage.setItem('outdoor-hours-user', JSON.stringify(currentUser));
-        showSignedIn();
-        syncFromDrive();
-      })
-      .catch(() => {
-        setSyncStatus('Could not fetch profile', true);
-      });
-    }
-
-    function handleSignOut() {
-      if (accessToken) {
-        google.accounts.oauth2.revoke(accessToken);
-      }
-      accessToken = null;
-      driveFileId = null;
-      currentUser = null;
-      localStorage.removeItem('outdoor-hours-user');
-      showSignedOut();
-      setSyncStatus('');
-    }
-
-    function showSignedIn() {
-      document.getElementById('authSignedOut').style.display = 'none';
-      document.getElementById('authSignedIn').style.display = 'flex';
-      if (currentUser) {
-        document.getElementById('authName').textContent = currentUser.name;
-        if (currentUser.picture) {
-          document.getElementById('authAvatar').src = currentUser.picture;
-          document.getElementById('authAvatar').style.display = 'block';
-        } else {
-          document.getElementById('authAvatar').style.display = 'none';
-        }
-      }
-    }
-
-    function showSignedOut() {
-      document.getElementById('authSignedOut').style.display = 'flex';
-      document.getElementById('authSignedIn').style.display = 'none';
-    }
-
-    function setSyncStatus(msg, isError) {
-      const el = document.getElementById('syncStatus');
-      el.textContent = msg;
-      el.className = 'sync-status' + (isError ? ' error' : '');
-    }
-
-    // =============================================
-    // Google Drive API
-    // =============================================
-    function driveRequest(url, options) {
-      options = options || {};
-      options.headers = options.headers || {};
-      options.headers['Authorization'] = 'Bearer ' + accessToken;
-      return fetch(url, options).then(r => {
-        if (r.status === 401) {
-          // Token expired — try silent refresh
-          return new Promise((resolve, reject) => {
-            tokenClient.requestAccessToken({ prompt: '' });
-            // Wait a bit for the callback
-            const check = setInterval(() => {
-              if (accessToken) {
-                clearInterval(check);
-                options.headers['Authorization'] = 'Bearer ' + accessToken;
-                resolve(fetch(url, options));
-              }
-            }, 500);
-            setTimeout(() => { clearInterval(check); reject(new Error('Token refresh timeout')); }, 10000);
-          });
-        }
-        return r;
-      });
-    }
-
-    async function findDriveFile() {
-      const query = encodeURIComponent("name='" + DRIVE_FILE_NAME + "' and trashed=false");
-      const res = await driveRequest(
-        'https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=' + query + '&fields=files(id,name)'
-      );
-      const data = await res.json();
-      if (data.files && data.files.length > 0) {
-        return data.files[0].id;
-      }
-      return null;
-    }
-
-    async function readDriveFile(fileId) {
-      const res = await driveRequest(
-        'https://www.googleapis.com/drive/v3/files/' + fileId + '?alt=media'
-      );
-      return res.json();
-    }
-
-    async function createDriveFile(data) {
-      const metadata = {
-        name: DRIVE_FILE_NAME,
-        parents: ['appDataFolder']
-      };
-
-      const form = new FormData();
-      form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-      form.append('file', new Blob([JSON.stringify(data)], { type: 'application/json' }));
-
-      const res = await driveRequest(
-        'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',
-        { method: 'POST', body: form }
-      );
-      const result = await res.json();
-      return result.id;
-    }
-
-    async function updateDriveFile(fileId, data) {
-      await driveRequest(
-        'https://www.googleapis.com/upload/drive/v3/files/' + fileId + '?uploadType=media',
-        {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data)
-        }
-      );
-    }
-
-    // =============================================
-    // Sync Logic
-    // =============================================
-    async function syncFromDrive() {
-      if (!accessToken || isSyncing) return;
-      isSyncing = true;
-      setSyncStatus('Syncing...');
-
-      try {
-        driveFileId = await findDriveFile();
-
-        if (driveFileId) {
-          const driveData = await readDriveFile(driveFileId);
-          if (Array.isArray(driveData)) {
-            // Merge: combine local and remote, deduplicate by id
-            const merged = mergeEntries(entries, driveData);
-            entries = merged;
-            saveLocal();
-            renderAll();
-            // Push merged back to Drive
-            await updateDriveFile(driveFileId, entries);
-          }
-          setSyncStatus('Synced with Google Drive');
-        } else {
-          // No file on Drive yet — upload local data
-          if (entries.length > 0) {
-            driveFileId = await createDriveFile(entries);
-            setSyncStatus('Synced with Google Drive');
-          } else {
-            setSyncStatus('Connected to Google Drive');
-          }
-        }
-      } catch (e) {
-        console.error('Drive sync error:', e);
-        setSyncStatus('Sync failed — using local data', true);
-      }
-
-      isSyncing = false;
-    }
-
-    async function syncToDrive() {
-      if (!accessToken || isSyncing) return;
-      isSyncing = true;
-
-      try {
-        if (driveFileId) {
-          await updateDriveFile(driveFileId, entries);
-        } else {
-          driveFileId = await createDriveFile(entries);
-        }
-        setSyncStatus('Synced with Google Drive');
-      } catch (e) {
-        console.error('Drive save error:', e);
-        setSyncStatus('Sync failed — saved locally', true);
-      }
-
-      isSyncing = false;
-    }
+    // Render auth UI
+    storage.renderAuthUI(document.getElementById('authSection'), {
+      onSignIn: async () => {
+        entries = await storage.syncFromDrive(entries, mergeEntries);
+        renderAll();
+      },
+      onSignOut: () => {}
+    });
 
     function mergeEntries(local, remote) {
+      if (!Array.isArray(remote)) return local || [];
       const map = new Map();
-      // Remote entries first, then local overrides
-      remote.forEach(e => map.set(e.id, e));
-      local.forEach(e => map.set(e.id, e));
-      // Sort newest first by date, then by id
+      (remote || []).forEach(e => map.set(e.id, e));
+      (local || []).forEach(e => map.set(e.id, e));
       return Array.from(map.values()).sort((a, b) => {
         if (a.date !== b.date) return b.date.localeCompare(a.date);
         return b.id - a.id;
       });
     }
 
-    // =============================================
-    // Local Persistence
-    // =============================================
-    function loadLocal() {
-      try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (raw) entries = JSON.parse(raw);
-      } catch (e) {
-        entries = [];
-      }
-    }
-
-    function saveLocal() {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
-    }
-
     function saveData() {
-      saveLocal();
-      syncToDrive();
+      storage.save(entries);
     }
 
-    // =============================================
-    // Stopwatch
-    // =============================================
+    // --- Stopwatch ---
     function toggleStopwatch() {
-      if (stopwatchRunning) {
-        pauseStopwatch();
-      } else {
-        startStopwatch();
-      }
+      if (stopwatchRunning) pauseStopwatch();
+      else startStopwatch();
     }
 
     function startStopwatch() {
@@ -877,9 +510,7 @@
       return n.toString().padStart(2, '0');
     }
 
-    // =============================================
-    // Log past hours
-    // =============================================
+    // --- Log past hours ---
     function logPastHours() {
       const dateInput = document.getElementById('logDate');
       const hoursInput = document.getElementById('logHours');
@@ -904,9 +535,7 @@
       noteInput.value = '';
     }
 
-    // =============================================
-    // Delete
-    // =============================================
+    // --- Delete ---
     function deleteEntry(id) {
       entries = entries.filter(e => e.id !== id);
       saveData();
@@ -921,9 +550,7 @@
       }
     }
 
-    // =============================================
-    // Rendering
-    // =============================================
+    // --- Rendering ---
     function renderAll() {
       renderTotal();
       renderWeekSummary();
@@ -998,16 +625,13 @@
       return div.innerHTML;
     }
 
-    // =============================================
-    // Init
-    // =============================================
+    // --- Init ---
     (function init() {
       const today = new Date().toISOString().slice(0, 10);
       document.getElementById('logDate').value = today;
 
-      loadLocal();
+      entries = storage.loadLocal() || [];
       renderAll();
-      initGoogleAuth();
     })();
   </script>
 </body>

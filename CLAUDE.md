@@ -10,6 +10,9 @@ sierra-apps/
 │   ├── my-web-app/        # Example: a web app
 │   ├── budget-tracker/    # Example: another app
 │   └── ...
+├── shared/                # Shared libraries used by all apps
+│   ├── config.js          # Google OAuth Client ID and shared config
+│   └── google-drive-storage.js  # Google Sign-In + Drive storage helper
 ├── CLAUDE.md              # This file — repo-level guidance
 └── package.json           # Root workspace config (for JS/TS apps)
 ```
@@ -122,6 +125,88 @@ Once enabled, everything pushed to `main` is live at `https://sethjones348.githu
 - Large tap targets (min 44x44px) for buttons and links
 - Readable font sizes (min 16px body text)
 - Avoid hover-dependent interactions
+
+## Persistent Storage (Google Drive)
+
+All apps that need to persist user data should use **Google Sign-In + Google Drive** for cloud storage, with **localStorage** as the fast local cache and offline fallback.
+
+### Architecture
+
+- **localStorage** is the primary/fast storage — always available, no sign-in required
+- **Google Drive `appDataFolder`** is the cloud backup — syncs when the user signs in with Google
+- The `appDataFolder` is a hidden, app-specific folder in the user's Drive (doesn't clutter their files)
+- On sign-in, local and Drive data are merged so nothing is lost
+
+### Shared libraries
+
+Two shared files in `shared/` provide everything needed:
+
+1. **`shared/config.js`** — Contains the Google OAuth Client ID (shared across all apps)
+2. **`shared/google-drive-storage.js`** — `GoogleDriveStorage` class that handles auth UI, sign-in/out, and Drive read/write
+
+The Google OAuth Client ID is: `437861067044-r6m2ndd5bqgd0u82f1rjq8a3nv91fc3q.apps.googleusercontent.com`
+
+### How to add storage to a new app
+
+1. Add these script tags to the app's `<head>` (in this order):
+   ```html
+   <script src="https://accounts.google.com/gsi/client" async defer></script>
+   <script src="/sierra-apps/shared/config.js"></script>
+   <script src="/sierra-apps/shared/google-drive-storage.js"></script>
+   ```
+
+2. Add a `<style>` tag for the auth UI styles:
+   ```html
+   <style id="gds-styles"></style>
+   ```
+
+3. Add an auth container element in the HTML:
+   ```html
+   <div id="authSection"></div>
+   ```
+
+4. In your app's JavaScript, initialize and use:
+   ```javascript
+   // Each app uses its own unique file name in Drive
+   const storage = new GoogleDriveStorage('my-app-data.json', 'my-app-local-key');
+
+   // Inject the auth UI styles
+   document.getElementById('gds-styles').textContent = GoogleDriveStorage.getStyles();
+
+   // Render the sign-in/sign-out UI
+   storage.renderAuthUI(document.getElementById('authSection'), {
+     onSignIn: async () => {
+       // Merge local + Drive data on sign-in
+       myData = await storage.syncFromDrive(myData, myMergeFunction);
+       render();
+     },
+     onSignOut: () => {}
+   });
+
+   // Load from localStorage on page load
+   let myData = storage.loadLocal() || defaultValue;
+
+   // Save data (writes to localStorage + syncs to Drive if signed in)
+   storage.save(myData);
+   ```
+
+5. Provide a merge function for combining local and remote data (handles the case where data exists in both places):
+   ```javascript
+   function myMergeFunction(local, remote) {
+     // For array-based data: deduplicate by id, sort by date
+     const map = new Map();
+     (remote || []).forEach(e => map.set(e.id, e));
+     (local || []).forEach(e => map.set(e.id, e));
+     return Array.from(map.values()).sort((a, b) => b.id - a.id);
+   }
+   ```
+
+### Important notes
+
+- Each app MUST use a **unique file name** for its Drive file (e.g., `outdoor-hours-data.json`, `budget-data.json`)
+- Always load from localStorage first for instant rendering, then sync with Drive in the background
+- The sign-in button and sync status are handled automatically by the shared library
+- The OAuth Client ID is configured for the origin `https://sethjones348.github.io` — no per-app setup needed
 
 ## Running an Existing App
 
