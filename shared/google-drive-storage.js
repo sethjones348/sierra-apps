@@ -2,7 +2,9 @@
  * Google Drive Storage — shared helper for Sierra Apps.
  *
  * Google Drive is the single source of truth.
- * You must sign in to see your data. Sign out to hide it.
+ * Sign in to see your data. Sign out to hide it.
+ * Access token is cached in localStorage so page refreshes and
+ * navigations don't require re-authentication (~1 hour token lifetime).
  *
  * Dependencies:
  *   1. <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -19,6 +21,7 @@ class GoogleDriveStorage {
     this.currentUser = null;
     this.callbacks = {};
     this._userCacheKey = 'gds-auth-user';
+    this._tokenCacheKey = 'gds-auth-token';
   }
 
   // =============================================
@@ -100,19 +103,42 @@ class GoogleDriveStorage {
       callback: (response) => this._handleTokenResponse(response),
     });
 
-    // Try restoring session silently on page load
-    const cached = localStorage.getItem(this._userCacheKey);
-    if (cached) {
-      try {
-        this.currentUser = JSON.parse(cached);
-        this._showSignedIn();
-        this._setSyncStatus('Connecting...');
-        this._silentRefresh = true;
-        this.tokenClient.requestAccessToken({ prompt: '' });
-      } catch (e) {
-        localStorage.removeItem(this._userCacheKey);
-      }
+    // Try to restore session from cached token
+    var cachedUser = null;
+    var cachedToken = null;
+    try {
+      var userRaw = localStorage.getItem(this._userCacheKey);
+      var tokenRaw = localStorage.getItem(this._tokenCacheKey);
+      if (userRaw) cachedUser = JSON.parse(userRaw);
+      if (tokenRaw) cachedToken = JSON.parse(tokenRaw);
+    } catch (e) {
+      // Corrupt cache — clear it
+      localStorage.removeItem(this._userCacheKey);
+      localStorage.removeItem(this._tokenCacheKey);
     }
+
+    if (cachedUser && cachedToken && cachedToken.expiresAt > Date.now()) {
+      // Cached token is still valid — use it directly, no auth request needed
+      this.accessToken = cachedToken.accessToken;
+      this.currentUser = cachedUser;
+      this._showSignedIn();
+      if (this.callbacks.onSignIn) this.callbacks.onSignIn();
+      return;
+    }
+
+    if (cachedUser && cachedToken) {
+      // User was signed in but token expired — try silent refresh
+      this.currentUser = cachedUser;
+      this._showSignedIn();
+      this._setSyncStatus('Connecting...');
+      this._silentRefresh = true;
+      this.tokenClient.requestAccessToken({ prompt: '' });
+      return;
+    }
+
+    // No cached session — show sign-in button
+    localStorage.removeItem(this._userCacheKey);
+    localStorage.removeItem(this._tokenCacheKey);
   }
 
   signIn() {
@@ -132,20 +158,23 @@ class GoogleDriveStorage {
     this.driveFileId = null;
     this.currentUser = null;
     localStorage.removeItem(this._userCacheKey);
+    localStorage.removeItem(this._tokenCacheKey);
     this._showSignedOut();
     this._setSyncStatus('');
     if (this.callbacks.onSignOut) this.callbacks.onSignOut();
   }
 
   _handleTokenResponse(response) {
-    const wasSilent = this._silentRefresh;
+    var wasSilent = this._silentRefresh;
     this._silentRefresh = false;
 
     if (response.error) {
-      // If silent restore failed, just show sign-in button (don't revoke anything)
       if (wasSilent) {
+        // Silent refresh failed — clear session and show sign-in button
         this.currentUser = null;
+        this.accessToken = null;
         localStorage.removeItem(this._userCacheKey);
+        localStorage.removeItem(this._tokenCacheKey);
         this._showSignedOut();
         this._setSyncStatus('');
       }
@@ -154,11 +183,19 @@ class GoogleDriveStorage {
 
     this.accessToken = response.access_token;
 
+    // Cache the token with its expiry (typically ~3600 seconds)
+    var expiresAt = Date.now() + ((response.expires_in || 3600) * 1000);
+    localStorage.setItem(this._tokenCacheKey, JSON.stringify({
+      accessToken: this.accessToken,
+      expiresAt: expiresAt
+    }));
+
+    // Fetch user profile
     fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
       headers: { Authorization: 'Bearer ' + this.accessToken }
     })
-    .then(r => r.json())
-    .then(profile => {
+    .then(function(r) { return r.json(); })
+    .then(function(profile) {
       this.currentUser = {
         name: profile.given_name || profile.name,
         picture: profile.picture
@@ -166,10 +203,16 @@ class GoogleDriveStorage {
       localStorage.setItem(this._userCacheKey, JSON.stringify(this.currentUser));
       this._showSignedIn();
       if (this.callbacks.onSignIn) this.callbacks.onSignIn();
-    })
-    .catch(() => {
-      this._setSyncStatus('Could not fetch profile', true);
-    });
+    }.bind(this))
+    .catch(function() {
+      // Token works but profile fetch failed — still sign in
+      if (!this.currentUser) {
+        this.currentUser = { name: 'Signed In', picture: '' };
+      }
+      localStorage.setItem(this._userCacheKey, JSON.stringify(this.currentUser));
+      this._showSignedIn();
+      if (this.callbacks.onSignIn) this.callbacks.onSignIn();
+    }.bind(this));
   }
 
   _showSignedIn() {
@@ -178,7 +221,7 @@ class GoogleDriveStorage {
     this.authContainer.querySelector('#gds-signed-in').style.display = 'flex';
     if (this.currentUser) {
       this.authContainer.querySelector('#gds-name').textContent = this.currentUser.name;
-      const avatar = this.authContainer.querySelector('#gds-avatar');
+      var avatar = this.authContainer.querySelector('#gds-avatar');
       if (this.currentUser.picture) {
         avatar.src = this.currentUser.picture;
         avatar.style.display = 'block';
@@ -196,7 +239,7 @@ class GoogleDriveStorage {
 
   _setSyncStatus(msg, isError) {
     if (!this.authContainer) return;
-    const el = this.authContainer.querySelector('#gds-sync-status');
+    var el = this.authContainer.querySelector('#gds-sync-status');
     if (el) {
       el.textContent = msg;
       el.className = 'gds-sync-status' + (isError ? ' error' : '');
@@ -219,7 +262,11 @@ class GoogleDriveStorage {
       this._setSyncStatus('Saved');
     } catch (e) {
       console.error('Drive save error:', e);
-      this._setSyncStatus('Save failed', true);
+      if (e.message === 'token_expired') {
+        this._onTokenExpired();
+      } else {
+        this._setSyncStatus('Save failed', true);
+      }
     }
   }
 
@@ -231,35 +278,48 @@ class GoogleDriveStorage {
     options = options || {};
     options.headers = options.headers || {};
     options.headers['Authorization'] = 'Bearer ' + this.accessToken;
-    return fetch(url, options);
+    var r = await fetch(url, options);
+    if (r.status === 401) {
+      // Token was revoked or is invalid — clear it
+      this.accessToken = null;
+      localStorage.removeItem(this._tokenCacheKey);
+      throw new Error('token_expired');
+    }
+    return r;
+  }
+
+  _onTokenExpired() {
+    this.accessToken = null;
+    localStorage.removeItem(this._tokenCacheKey);
+    this._setSyncStatus('Session expired — please sign in again', true);
   }
 
   async _findDriveFile() {
-    const query = encodeURIComponent("name='" + this.fileName + "' and trashed=false");
-    const res = await this._driveRequest(
+    var query = encodeURIComponent("name='" + this.fileName + "' and trashed=false");
+    var res = await this._driveRequest(
       'https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=' + query + '&fields=files(id,name)'
     );
-    const data = await res.json();
+    var data = await res.json();
     return (data.files && data.files.length > 0) ? data.files[0].id : null;
   }
 
   async _readDriveFile(fileId) {
-    const res = await this._driveRequest(
+    var res = await this._driveRequest(
       'https://www.googleapis.com/drive/v3/files/' + fileId + '?alt=media'
     );
     return res.json();
   }
 
   async _createDriveFile(data) {
-    const metadata = { name: this.fileName, parents: ['appDataFolder'] };
-    const form = new FormData();
+    var metadata = { name: this.fileName, parents: ['appDataFolder'] };
+    var form = new FormData();
     form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
     form.append('file', new Blob([JSON.stringify(data)], { type: 'application/json' }));
-    const res = await this._driveRequest(
+    var res = await this._driveRequest(
       'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',
       { method: 'POST', body: form }
     );
-    const result = await res.json();
+    var result = await res.json();
     return result.id;
   }
 
@@ -286,7 +346,7 @@ class GoogleDriveStorage {
       this.driveFileId = await this._findDriveFile();
 
       if (this.driveFileId) {
-        const data = await this._readDriveFile(this.driveFileId);
+        var data = await this._readDriveFile(this.driveFileId);
         this._setSyncStatus('');
         return data;
       } else {
@@ -295,7 +355,11 @@ class GoogleDriveStorage {
       }
     } catch (e) {
       console.error('Drive load error:', e);
-      this._setSyncStatus('Failed to load', true);
+      if (e.message === 'token_expired') {
+        this._onTokenExpired();
+      } else {
+        this._setSyncStatus('Failed to load', true);
+      }
       return null;
     }
   }
