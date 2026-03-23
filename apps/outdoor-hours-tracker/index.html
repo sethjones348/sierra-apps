@@ -322,6 +322,76 @@
 
     .clear-all-btn:active { opacity: 0.5; }
 
+    /* Bulk add */
+    .bulk-section {
+      padding: 2rem 0;
+      border-bottom: 1px solid #E8E4DF;
+      text-align: center;
+    }
+
+    .bulk-modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(44, 44, 44, 0.4);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+
+    .bulk-modal-overlay.open {
+      display: flex;
+    }
+
+    .bulk-modal {
+      background: #FAF8F5;
+      border-radius: 12px;
+      padding: 2rem 1.5rem;
+      width: 100%;
+      max-width: 420px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .bulk-modal h2 {
+      font-family: 'Playfair Display', serif;
+      font-weight: 400;
+      font-size: 1.2rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      text-align: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .bulk-form {
+      display: flex;
+      flex-direction: column;
+      gap: 1.2rem;
+    }
+
+    .bulk-row {
+      display: flex;
+      gap: 1rem;
+    }
+
+    .bulk-row .input-group { flex: 1; }
+
+    .bulk-preview {
+      font-size: 0.8rem;
+      color: #8A8478;
+      text-align: center;
+      padding: 0.8rem 0;
+      letter-spacing: 0.03em;
+    }
+
+    .bulk-btn-row {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      margin-top: 0.5rem;
+    }
+
     /* Back link */
     .back-link {
       display: inline-block;
@@ -385,6 +455,44 @@
         </div>
         <div class="log-btn-row">
           <button class="btn" onclick="logPastHours()">Add Entry</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bulk add -->
+    <div class="bulk-section">
+      <div class="section-title">Backfill Previous Months</div>
+      <button class="btn" onclick="openBulkModal()">Bulk Add Hours</button>
+    </div>
+
+    <!-- Bulk modal -->
+    <div class="bulk-modal-overlay" id="bulkOverlay" onclick="closeBulkModal(event)">
+      <div class="bulk-modal" onclick="event.stopPropagation()">
+        <h2>Bulk Add Hours</h2>
+        <div class="bulk-form">
+          <div class="bulk-row">
+            <div class="input-group">
+              <label>From Month</label>
+              <input type="month" id="bulkFrom">
+            </div>
+            <div class="input-group">
+              <label>To Month</label>
+              <input type="month" id="bulkTo">
+            </div>
+          </div>
+          <div class="input-group">
+            <label>Hours per Month</label>
+            <input type="number" id="bulkHours" placeholder="e.g. 20" min="0" step="0.25">
+          </div>
+          <div class="input-group">
+            <label>Note (optional)</label>
+            <input type="text" id="bulkNote" placeholder="e.g. Estimated outdoor time">
+          </div>
+          <div class="bulk-preview" id="bulkPreview"></div>
+          <div class="bulk-btn-row">
+            <button class="btn btn-danger" onclick="closeBulkModal()">Cancel</button>
+            <button class="btn btn-primary" onclick="submitBulk()">Add All</button>
+          </div>
         </div>
       </div>
     </div>
@@ -623,6 +731,93 @@
       const div = document.createElement('div');
       div.textContent = str;
       return div.innerHTML;
+    }
+
+    // --- Bulk add ---
+    function openBulkModal() {
+      const now = new Date();
+      const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const formatMonth = d => d.toISOString().slice(0, 7);
+      document.getElementById('bulkFrom').value = formatMonth(lastMonth);
+      document.getElementById('bulkTo').value = formatMonth(lastMonth);
+      document.getElementById('bulkHours').value = '';
+      document.getElementById('bulkNote').value = '';
+      updateBulkPreview();
+      document.getElementById('bulkOverlay').classList.add('open');
+    }
+
+    function closeBulkModal(e) {
+      if (e && e.target !== document.getElementById('bulkOverlay')) return;
+      document.getElementById('bulkOverlay').classList.remove('open');
+    }
+
+    function getMonthsBetween(from, to) {
+      const months = [];
+      const [fy, fm] = from.split('-').map(Number);
+      const [ty, tm] = to.split('-').map(Number);
+      let y = fy, m = fm;
+      while (y < ty || (y === ty && m <= tm)) {
+        months.push({ year: y, month: m });
+        m++;
+        if (m > 12) { m = 1; y++; }
+      }
+      return months;
+    }
+
+    function updateBulkPreview() {
+      const from = document.getElementById('bulkFrom').value;
+      const to = document.getElementById('bulkTo').value;
+      const hours = parseFloat(document.getElementById('bulkHours').value);
+      const preview = document.getElementById('bulkPreview');
+
+      if (!from || !to || from > to) {
+        preview.textContent = '';
+        return;
+      }
+
+      const months = getMonthsBetween(from, to);
+      const count = months.length;
+      const total = isNaN(hours) || hours <= 0 ? 0 : hours * count;
+      preview.textContent = count + ' month' + (count !== 1 ? 's' : '') +
+        (total > 0 ? ' — ' + total + ' hrs total' : '');
+    }
+
+    // Update preview when inputs change
+    document.getElementById('bulkFrom').addEventListener('input', updateBulkPreview);
+    document.getElementById('bulkTo').addEventListener('input', updateBulkPreview);
+    document.getElementById('bulkHours').addEventListener('input', updateBulkPreview);
+
+    function submitBulk() {
+      const from = document.getElementById('bulkFrom').value;
+      const to = document.getElementById('bulkTo').value;
+      const hours = parseFloat(document.getElementById('bulkHours').value);
+      const note = document.getElementById('bulkNote').value.trim();
+
+      if (!from || !to || from > to) return;
+      if (isNaN(hours) || hours <= 0) return;
+
+      const months = getMonthsBetween(from, to);
+
+      months.forEach(({ year, month }) => {
+        // Use the 15th of each month as the entry date
+        const date = year + '-' + String(month).padStart(2, '0') + '-15';
+        entries.unshift({
+          id: Date.now() + Math.random(),
+          date: date,
+          hours: Math.round(hours * 100) / 100,
+          note: note || 'Bulk entry'
+        });
+      });
+
+      // Sort entries by date descending
+      entries.sort((a, b) => {
+        if (a.date !== b.date) return b.date.localeCompare(a.date);
+        return b.id - a.id;
+      });
+
+      saveData();
+      renderAll();
+      document.getElementById('bulkOverlay').classList.remove('open');
     }
 
     // --- Init ---
