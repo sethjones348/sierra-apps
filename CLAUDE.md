@@ -128,14 +128,16 @@ Once enabled, everything pushed to `main` is live at `https://sethjones348.githu
 
 ## Persistent Storage (Google Drive)
 
-All apps that need to persist user data should use **Google Sign-In + Google Drive** for cloud storage, with **localStorage** as the fast local cache and offline fallback.
+All apps that need to persist user data should use **Google Sign-In + Google Drive** as the single source of truth. **Do not use localStorage** for data persistence — Drive is the database.
 
 ### Architecture
 
-- **localStorage** is the primary/fast storage — always available, no sign-in required
-- **Google Drive `appDataFolder`** is the cloud backup — syncs when the user signs in with Google
+- **Google Drive `appDataFolder`** is the only data store — all reads and writes go through Drive
 - The `appDataFolder` is a hidden, app-specific folder in the user's Drive (doesn't clutter their files)
-- On sign-in, local and Drive data are merged so nothing is lost
+- App content is hidden until the user signs in — show a "Sign in to ..." prompt instead
+- On sign-in, data is loaded directly from Drive with `loadFromDrive()`
+- On sign-out, local state is cleared and app content is hidden
+- No merge logic needed — Drive is the single source of truth
 
 ### Shared libraries
 
@@ -160,9 +162,19 @@ The Google OAuth Client ID is: `437861067044-r6m2ndd5bqgd0u82f1rjq8a3nv91fc3q.ap
    <style id="gds-styles"></style>
    ```
 
-3. Add an auth container element in the HTML:
+3. Add an auth container and sign-in prompt in the HTML:
    ```html
    <div id="authSection"></div>
+
+   <!-- Shown when not signed in -->
+   <div class="signin-prompt" id="signinPrompt">
+     <p>Sign in to see your data</p>
+   </div>
+
+   <!-- Hidden until signed in -->
+   <div id="appContent" style="display:none;">
+     <!-- Your app content here -->
+   </div>
    ```
 
 4. In your app's JavaScript, initialize and use:
@@ -176,35 +188,32 @@ The Google OAuth Client ID is: `437861067044-r6m2ndd5bqgd0u82f1rjq8a3nv91fc3q.ap
    // Render the sign-in/sign-out UI
    storage.renderAuthUI(document.getElementById('authSection'), {
      onSignIn: async () => {
-       // Merge local + Drive data on sign-in
-       myData = await storage.syncFromDrive(myData, myMergeFunction);
+       // Load data directly from Drive (single source of truth)
+       myData = await storage.loadFromDrive() || defaultValue;
+
+       // Show app content
+       document.getElementById('signinPrompt').style.display = 'none';
+       document.getElementById('appContent').style.display = 'block';
        render();
      },
-     onSignOut: () => {}
+     onSignOut: () => {
+       // Clear state and hide app content
+       myData = defaultValue;
+       document.getElementById('signinPrompt').style.display = 'block';
+       document.getElementById('appContent').style.display = 'none';
+     }
    });
 
-   // Load from localStorage on page load
-   let myData = storage.loadLocal() || defaultValue;
-
-   // Save data (writes to localStorage + syncs to Drive if signed in)
+   // Save data (writes directly to Drive)
    storage.save(myData);
-   ```
-
-5. Provide a merge function for combining local and remote data (handles the case where data exists in both places):
-   ```javascript
-   function myMergeFunction(local, remote) {
-     // For array-based data: deduplicate by id, sort by date
-     const map = new Map();
-     (remote || []).forEach(e => map.set(e.id, e));
-     (local || []).forEach(e => map.set(e.id, e));
-     return Array.from(map.values()).sort((a, b) => b.id - a.id);
-   }
    ```
 
 ### Important notes
 
 - Each app MUST use a **unique file name** for its Drive file (e.g., `outdoor-hours-data.json`, `budget-data.json`)
-- Always load from localStorage first for instant rendering, then sync with Drive in the background
+- **Do not use localStorage** — Drive is the single source of truth
+- App content must be **hidden until the user signs in** — show a friendly sign-in prompt instead
+- On sign-out, **clear all local state** and hide app content
 - The sign-in button and sync status are handled automatically by the shared library
 - The OAuth Client ID is configured for the origin `https://sethjones348.github.io` — no per-app setup needed
 
