@@ -769,6 +769,8 @@
     // Render auth UI
     storage.renderAuthUI(document.getElementById('authSection'), {
       onSignIn: async () => {
+        // Share access token with photo storage so it can sync too
+        photoStorage.accessToken = storage.accessToken;
         entries = await storage.syncFromDrive(entries, mergeEntries);
         photos = await photoStorage.syncFromDrive(photos, mergePhotos);
         renderAll();
@@ -1161,6 +1163,8 @@
         if (a.date !== b.date) return b.date.localeCompare(a.date);
         return b.id - a.id;
       });
+      // Keep token in sync from main storage instance
+      if (storage.accessToken) photoStorage.accessToken = storage.accessToken;
       photoStorage.save(photos);
       cancelPhoto();
       renderHistory();
