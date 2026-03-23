@@ -3,7 +3,74 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="apple-mobile-web-app-title" content="Time Well Spent">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>Outdoor Hours</title>
+  <link rel="icon" href="/sierra-apps/apps/outdoor-hours-tracker/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" id="appleTouchIcon" href="/sierra-apps/apps/outdoor-hours-tracker/icon.svg">
+  <script>
+    // Generate PNG apple-touch-icon from canvas for iOS
+    (function() {
+      var c = document.createElement('canvas');
+      c.width = 180; c.height = 180;
+      var x = c.getContext('2d');
+      // Cream background with rounded corners (iOS clips automatically)
+      x.fillStyle = '#FAF8F5';
+      x.fillRect(0, 0, 180, 180);
+      // Sun body - light warm yellow
+      x.beginPath();
+      x.arc(90, 88, 42, 0, Math.PI * 2);
+      x.fillStyle = '#F6E6A0';
+      x.fill();
+      // Sun rays
+      x.strokeStyle = '#F6E6A0';
+      x.lineWidth = 3.5;
+      x.lineCap = 'round';
+      var rays = 10;
+      for (var i = 0; i < rays; i++) {
+        var angle = (i / rays) * Math.PI * 2 - Math.PI / 2;
+        var x1 = 90 + Math.cos(angle) * 48;
+        var y1 = 88 + Math.sin(angle) * 48;
+        var x2 = 90 + Math.cos(angle) * 60;
+        var y2 = 88 + Math.sin(angle) * 60;
+        x.beginPath();
+        x.moveTo(x1, y1);
+        x.lineTo(x2, y2);
+        x.stroke();
+      }
+      // Happy closed eyes - curved arcs
+      x.strokeStyle = '#8A7A60';
+      x.lineWidth = 2.5;
+      x.lineCap = 'round';
+      // Left eye
+      x.beginPath();
+      x.arc(77, 83, 7, Math.PI * 1.15, Math.PI * 1.85);
+      x.stroke();
+      // Right eye
+      x.beginPath();
+      x.arc(103, 83, 7, Math.PI * 1.15, Math.PI * 1.85);
+      x.stroke();
+      // Happy smile
+      x.beginPath();
+      x.arc(90, 92, 14, Math.PI * 0.15, Math.PI * 0.85);
+      x.stroke();
+      // Rosy cheeks
+      x.fillStyle = 'rgba(212, 170, 140, 0.35)';
+      x.beginPath(); x.arc(68, 96, 7, 0, Math.PI * 2); x.fill();
+      x.beginPath(); x.arc(112, 96, 7, 0, Math.PI * 2); x.fill();
+      // Small text at bottom
+      x.fillStyle = '#8A8478';
+      x.font = '300 11px sans-serif';
+      x.textAlign = 'center';
+      x.fillText('TIME WELL SPENT', 90, 155);
+      // Set as apple-touch-icon
+      try {
+        var link = document.getElementById('appleTouchIcon');
+        link.href = c.toDataURL('image/png');
+      } catch(e) {}
+    })();
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
