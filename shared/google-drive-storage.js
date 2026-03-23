@@ -39,7 +39,7 @@ class GoogleDriveStorage {
     this.currentUser = null;
     this.isSyncing = false;
     this.callbacks = {};
-    this._userCacheKey = this.localStorageKey + '-user';
+    this._userCacheKey = 'gds-auth-user';
   }
 
   // =============================================
