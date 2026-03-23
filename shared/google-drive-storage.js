@@ -337,6 +337,32 @@ class GoogleDriveStorage {
   // =============================================
 
   /**
+   * Load data directly from Drive (Drive as single source of truth).
+   * Returns the data from Drive, or null if no file exists yet.
+   */
+  async loadFromDrive() {
+    if (!this.accessToken) return null;
+    this._setSyncStatus('Loading...');
+
+    try {
+      this.driveFileId = await this._findDriveFile();
+
+      if (this.driveFileId) {
+        const data = await this._readDriveFile(this.driveFileId);
+        this._setSyncStatus('Connected to Google Drive');
+        return data;
+      } else {
+        this._setSyncStatus('Connected to Google Drive');
+        return null;
+      }
+    } catch (e) {
+      console.error('Drive load error:', e);
+      this._setSyncStatus('Failed to load from Drive', true);
+      return null;
+    }
+  }
+
+  /**
    * Pull data from Drive, merge with provided local data, and return merged result.
    * Also pushes merged data back to Drive.
    * mergeFunction(local, remote) should return the merged data.

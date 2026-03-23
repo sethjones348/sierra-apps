@@ -265,6 +265,18 @@
     }
 
     .month-header:first-child { margin-top: 0; }
+
+    /* Sign-in prompt */
+    .signin-prompt {
+      text-align: center;
+      padding: 4rem 1.5rem;
+    }
+
+    .signin-prompt-text {
+      font-size: 0.85rem;
+      color: #8A8478;
+      letter-spacing: 0.08em;
+    }
   </style>
   <style id="gds-styles"></style>
 </head>
@@ -276,8 +288,17 @@
 
   <div class="container">
     <div class="auth-section" id="authSection"></div>
-    <div class="gallery" id="gallery">
-      <div class="gallery-empty">No photos yet. Add one from the Tracker page.</div>
+
+    <!-- Sign-in prompt -->
+    <div class="signin-prompt" id="signinPrompt">
+      <p class="signin-prompt-text">Sign in to see your photos</p>
+    </div>
+
+    <!-- Gallery (hidden until signed in) -->
+    <div id="appContent" style="display:none;">
+      <div class="gallery" id="gallery">
+        <div class="gallery-empty">No photos yet. Add one from the Tracker page.</div>
+      </div>
     </div>
   </div>
 
@@ -320,22 +341,17 @@
 
     photoStorage.renderAuthUI(document.getElementById('authSection'), {
       onSignIn: async () => {
-        photos = await photoStorage.syncFromDrive(photos, mergePhotos);
+        photos = await photoStorage.loadFromDrive() || [];
+        document.getElementById('signinPrompt').style.display = 'none';
+        document.getElementById('appContent').style.display = 'block';
         renderGallery();
       },
-      onSignOut: () => {}
+      onSignOut: () => {
+        photos = [];
+        document.getElementById('signinPrompt').style.display = 'block';
+        document.getElementById('appContent').style.display = 'none';
+      }
     });
-
-    function mergePhotos(local, remote) {
-      if (!Array.isArray(remote)) return local || [];
-      const map = new Map();
-      (remote || []).forEach(p => map.set(p.id, p));
-      (local || []).forEach(p => map.set(p.id, p));
-      return Array.from(map.values()).sort((a, b) => {
-        if (a.date !== b.date) return b.date.localeCompare(a.date);
-        return b.id - a.id;
-      });
-    }
 
     function escapeHtml(str) {
       const div = document.createElement('div');
@@ -411,9 +427,7 @@
       renderGallery();
     }
 
-    // Init
-    photos = photoStorage.loadLocal() || [];
-    renderGallery();
+    // Init — app content stays hidden until sign-in
   </script>
 </body>
 </html>

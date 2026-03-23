@@ -599,6 +599,18 @@
     }
 
     .back-link:active { opacity: 0.5; }
+
+    /* Sign-in prompt */
+    .signin-prompt {
+      text-align: center;
+      padding: 4rem 1.5rem;
+    }
+
+    .signin-prompt-text {
+      font-size: 0.85rem;
+      color: #8A8478;
+      letter-spacing: 0.08em;
+    }
   </style>
   <style id="gds-styles"></style>
 </head>
@@ -611,6 +623,14 @@
   <div class="container">
     <!-- Auth -->
     <div class="auth-section" id="authSection"></div>
+
+    <!-- Sign-in prompt (shown when not signed in) -->
+    <div class="signin-prompt" id="signinPrompt">
+      <p class="signin-prompt-text">Sign in to track and see your hours</p>
+    </div>
+
+    <!-- App content (hidden until signed in) -->
+    <div id="appContent" style="display:none;">
 
     <!-- Total -->
     <div class="total-section">
@@ -729,6 +749,8 @@
         <button class="clear-all-btn" onclick="clearAll()">Clear All History</button>
       </div>
     </div>
+
+    </div><!-- /appContent -->
   </div>
 
   <!-- Bottom nav -->
@@ -755,7 +777,7 @@
     let stopwatchElapsed = 0;
     let stopwatchRunning = false;
 
-    // --- Google Drive Storage ---
+    // --- Google Drive Storage (single source of truth) ---
     const storage = new GoogleDriveStorage('outdoor-hours-data.json', 'outdoor-hours-data');
 
     // Inject shared auth styles
@@ -764,36 +786,29 @@
     // Render auth UI
     storage.renderAuthUI(document.getElementById('authSection'), {
       onSignIn: async () => {
-        // Share access token with photo storage so it can sync too
+        // Share access token with photo storage
         photoStorage.accessToken = storage.accessToken;
-        entries = await storage.syncFromDrive(entries, mergeEntries);
-        photos = await photoStorage.syncFromDrive(photos, mergePhotos);
+        photoStorage.tokenClient = storage.tokenClient;
+
+        // Load data from Drive (the single source of truth)
+        entries = await storage.loadFromDrive() || [];
+        photos = await photoStorage.loadFromDrive() || [];
+
+        // Show app content
+        document.getElementById('signinPrompt').style.display = 'none';
+        document.getElementById('appContent').style.display = 'block';
         renderAll();
       },
-      onSignOut: () => {}
+      onSignOut: () => {
+        // Clear local state and hide app content
+        entries = [];
+        photos = [];
+        photoStorage.accessToken = null;
+        photoStorage.driveFileId = null;
+        document.getElementById('signinPrompt').style.display = 'block';
+        document.getElementById('appContent').style.display = 'none';
+      }
     });
-
-    function mergeEntries(local, remote) {
-      if (!Array.isArray(remote)) return local || [];
-      const map = new Map();
-      (remote || []).forEach(e => map.set(e.id, e));
-      (local || []).forEach(e => map.set(e.id, e));
-      return Array.from(map.values()).sort((a, b) => {
-        if (a.date !== b.date) return b.date.localeCompare(a.date);
-        return b.id - a.id;
-      });
-    }
-
-    function mergePhotos(local, remote) {
-      if (!Array.isArray(remote)) return local || [];
-      const map = new Map();
-      (remote || []).forEach(p => map.set(p.id, p));
-      (local || []).forEach(p => map.set(p.id, p));
-      return Array.from(map.values()).sort((a, b) => {
-        if (a.date !== b.date) return b.date.localeCompare(a.date);
-        return b.id - a.id;
-      });
-    }
 
     function saveData() {
       storage.save(entries);
@@ -1158,8 +1173,6 @@
         if (a.date !== b.date) return b.date.localeCompare(a.date);
         return b.id - a.id;
       });
-      // Keep token in sync from main storage instance
-      if (storage.accessToken) photoStorage.accessToken = storage.accessToken;
       photoStorage.save(photos);
       cancelPhoto();
       renderHistory();
@@ -1169,10 +1182,7 @@
     (function init() {
       const today = new Date().toISOString().slice(0, 10);
       document.getElementById('logDate').value = today;
-
-      entries = storage.loadLocal() || [];
-      photos = photoStorage.loadLocal() || [];
-      renderAll();
+      // App content stays hidden until sign-in
     })();
   </script>
 </body>
