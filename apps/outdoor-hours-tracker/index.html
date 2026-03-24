@@ -786,11 +786,7 @@
     // Render auth UI
     storage.renderAuthUI(document.getElementById('authSection'), {
       onSignIn: async () => {
-        // Share access token with photo storage
-        photoStorage.accessToken = storage.accessToken;
-        photoStorage.tokenClient = storage.tokenClient;
-
-        // Load data from Drive (the single source of truth)
+        // Load data from Drive (falls back to localStorage cache if no token)
         entries = await storage.loadFromDrive() || [];
         photos = await photoStorage.loadFromDrive() || [];
 
@@ -803,8 +799,6 @@
         // Clear local state and hide app content
         entries = [];
         photos = [];
-        photoStorage.accessToken = null;
-        photoStorage.driveFileId = null;
         document.getElementById('signinPrompt').style.display = 'block';
         document.getElementById('appContent').style.display = 'none';
       }

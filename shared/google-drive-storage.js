@@ -1,10 +1,13 @@
 /**
  * Google Drive Storage — shared helper for Sierra Apps.
  *
- * Google Drive is the single source of truth.
- * Sign in to see your data. Sign out to hide it.
- * Access token is cached in localStorage so page refreshes and
- * navigations don't require re-authentication (~1 hour token lifetime).
+ * Architecture:
+ * - User identity persists in localStorage until explicit sign-out.
+ * - Access tokens are short-lived (~1 hour) and managed transparently.
+ * - App data is cached in localStorage for instant page loads.
+ * - Google Drive is the source of truth; localStorage is a read/write cache.
+ * - Token expiry never signs the user out — they stay signed in with cached data.
+ * - A dirty flag tracks unsynced local changes to prevent data loss on reconnect.
  *
  * Dependencies:
  *   1. <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -12,17 +15,123 @@
  *   3. <script src="/sierra-apps/shared/google-drive-storage.js"></script>
  */
 
+// Shared auth state — all GoogleDriveStorage instances share one identity and token
+var _GDS = {
+  user: null,
+  accessToken: null,
+  tokenExpiry: 0,
+  tokenClient: null,
+  authUI: null,
+  pendingToken: null,
+  _resolve: null,
+  _reject: null,
+  _isSignIn: false,
+  _isReconnect: false,
+  USER_KEY: 'gds-auth-user',
+  TOKEN_KEY: 'gds-auth-token',
+};
+
+var _gdsInstances = [];
+
+function _gdsSetStatus(msg, isError, isClickable) {
+  if (_GDS.authUI) _GDS.authUI._setSyncStatus(msg, isError, isClickable);
+}
+
+function _handleGDSToken(response) {
+  var isSignIn = _GDS._isSignIn;
+  var isReconnect = _GDS._isReconnect;
+  _GDS._isSignIn = false;
+  _GDS._isReconnect = false;
+  _GDS.pendingToken = null;
+
+  if (response.error) {
+    if (_GDS._reject) {
+      var rej = _GDS._reject;
+      _GDS._resolve = null;
+      _GDS._reject = null;
+      rej(new Error(response.error));
+    }
+    if (isReconnect) {
+      _gdsSetStatus('Tap to sync', false, true);
+    }
+    return;
+  }
+
+  // Save token
+  _GDS.accessToken = response.access_token;
+  _GDS.tokenExpiry = Date.now() + ((response.expires_in || 3600) * 1000);
+  try {
+    localStorage.setItem(_GDS.TOKEN_KEY, JSON.stringify({
+      accessToken: _GDS.accessToken,
+      expiresAt: _GDS.tokenExpiry,
+    }));
+  } catch (e) {}
+
+  if (isSignIn) {
+    // First sign-in — fetch user profile, then notify app
+    fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+      headers: { Authorization: 'Bearer ' + _GDS.accessToken },
+    })
+      .then(function(r) { return r.json(); })
+      .then(function(profile) {
+        _GDS.user = {
+          name: profile.given_name || profile.name,
+          picture: profile.picture,
+        };
+        localStorage.setItem(_GDS.USER_KEY, JSON.stringify(_GDS.user));
+        if (_GDS.authUI) {
+          _GDS.authUI._showSignedIn();
+          if (_GDS.authUI.callbacks.onSignIn) _GDS.authUI.callbacks.onSignIn();
+        }
+      })
+      .catch(function() {
+        _GDS.user = { name: 'Signed In', picture: '' };
+        localStorage.setItem(_GDS.USER_KEY, JSON.stringify(_GDS.user));
+        if (_GDS.authUI) {
+          _GDS.authUI._showSignedIn();
+          if (_GDS.authUI.callbacks.onSignIn) _GDS.authUI.callbacks.onSignIn();
+        }
+      });
+    return;
+  }
+
+  if (isReconnect) {
+    // Reconnect — sync pending changes, then re-trigger data load
+    _gdsSetStatus('');
+    _gdsSyncAllPending().then(function() {
+      if (_GDS.authUI && _GDS.authUI.callbacks.onSignIn) {
+        _GDS.authUI.callbacks.onSignIn();
+      }
+    });
+    return;
+  }
+
+  // Silent refresh — resolve the promise
+  if (_GDS._resolve) {
+    var res = _GDS._resolve;
+    _GDS._resolve = null;
+    _GDS._reject = null;
+    res();
+  }
+}
+
+function _gdsSyncAllPending() {
+  var promises = _gdsInstances.map(function(inst) {
+    return inst._syncPendingChanges();
+  });
+  return Promise.all(promises);
+}
+
 class GoogleDriveStorage {
   constructor(fileName) {
     this.fileName = fileName;
-    this.accessToken = null;
-    this.driveFileId = null;
-    this.tokenClient = null;
-    this.currentUser = null;
-    this.callbacks = {};
-    this._userCacheKey = 'gds-auth-user';
-    this._tokenCacheKey = 'gds-auth-token';
     this._fileIdCacheKey = 'gds-file-' + fileName;
+    this._dataCacheKey = 'gds-data-' + fileName;
+    this._dirtyKey = 'gds-dirty-' + fileName;
+    this.driveFileId = localStorage.getItem(this._fileIdCacheKey) || null;
+    this.callbacks = {};
+    this.authContainer = null;
+    _gdsInstances.push(this);
   }
 
   // =============================================
@@ -32,6 +141,7 @@ class GoogleDriveStorage {
   renderAuthUI(container, callbacks) {
     this.callbacks = callbacks || {};
     this.authContainer = container;
+    _GDS.authUI = this;
 
     container.innerHTML =
       '<div class="gds-signed-out" id="gds-signed-out">' +
@@ -77,8 +187,9 @@ class GoogleDriveStorage {
         display: flex; align-items: center; transition: opacity 0.2s ease;
       }
       .gds-signout-btn:active { opacity: 0.5; }
-      .gds-sync-status { font-size: 0.65rem; color: #A3A88E; letter-spacing: 0.08em; margin-top: 0.4rem; text-align: center; min-height: 44px; display: flex; align-items: center; justify-content: center; }
+      .gds-sync-status { font-size: 0.65rem; color: #A3A88E; letter-spacing: 0.08em; margin-top: 0.4rem; text-align: center; min-height: 1em; }
       .gds-sync-status.error { color: #C4A68A; }
+      .gds-sync-status.clickable { cursor: pointer; text-decoration: underline; min-height: 44px; display: flex; align-items: center; justify-content: center; }
     `;
   }
 
@@ -87,47 +198,36 @@ class GoogleDriveStorage {
   // =============================================
 
   _initAuth() {
-    // Try to restore session from cached token immediately (no GIS library needed)
-    var cachedUser = null;
-    var cachedToken = null;
+    // Restore user identity from localStorage
     try {
-      var userRaw = localStorage.getItem(this._userCacheKey);
-      var tokenRaw = localStorage.getItem(this._tokenCacheKey);
-      if (userRaw) cachedUser = JSON.parse(userRaw);
-      if (tokenRaw) cachedToken = JSON.parse(tokenRaw);
+      var userRaw = localStorage.getItem(_GDS.USER_KEY);
+      if (userRaw) _GDS.user = JSON.parse(userRaw);
     } catch (e) {
-      localStorage.removeItem(this._userCacheKey);
-      localStorage.removeItem(this._tokenCacheKey);
+      localStorage.removeItem(_GDS.USER_KEY);
     }
 
-    // Restore cached Drive file ID
-    var cachedFileId = localStorage.getItem(this._fileIdCacheKey);
-    if (cachedFileId) this.driveFileId = cachedFileId;
+    // Restore cached token (only if still valid)
+    try {
+      var tokenRaw = localStorage.getItem(_GDS.TOKEN_KEY);
+      if (tokenRaw) {
+        var tokenData = JSON.parse(tokenRaw);
+        if (tokenData.expiresAt > Date.now()) {
+          _GDS.accessToken = tokenData.accessToken;
+          _GDS.tokenExpiry = tokenData.expiresAt;
+        }
+      }
+    } catch (e) {
+      localStorage.removeItem(_GDS.TOKEN_KEY);
+    }
 
-    if (cachedUser && cachedToken && cachedToken.expiresAt > Date.now()) {
-      // Cached token is still valid — use it directly, no auth request needed
-      this.accessToken = cachedToken.accessToken;
-      this.currentUser = cachedUser;
+    if (_GDS.user) {
+      // User identity cached — show as signed in immediately
       this._showSignedIn();
+      // Call onSignIn so the app can render with cached data
       if (this.callbacks.onSignIn) this.callbacks.onSignIn();
-      // Set up GIS in background for sign-out button
-      this._initGIS();
-      return;
     }
 
-    if (cachedUser && cachedToken) {
-      // User was signed in but token expired — need GIS for silent refresh
-      this.currentUser = cachedUser;
-      this._showSignedIn();
-      this._setSyncStatus('Connecting...');
-      this._pendingSilentRefresh = true;
-      this._initGIS();
-      return;
-    }
-
-    // No cached session — need GIS for sign-in button
-    localStorage.removeItem(this._userCacheKey);
-    localStorage.removeItem(this._tokenCacheKey);
+    // Set up GIS in background
     this._initGIS();
   }
 
@@ -143,132 +243,159 @@ class GoogleDriveStorage {
       return;
     }
 
-    this.tokenClient = google.accounts.oauth2.initTokenClient({
+    _GDS.tokenClient = google.accounts.oauth2.initTokenClient({
       client_id: clientId,
       scope: 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile',
-      callback: (response) => this._handleTokenResponse(response),
+      callback: _handleGDSToken,
     });
 
-    // If we were waiting to do a silent refresh, do it now
-    if (this._pendingSilentRefresh) {
-      this._pendingSilentRefresh = false;
-      this._silentRefresh = true;
-      this.tokenClient.requestAccessToken({ prompt: '' });
+    // If signed in but token is expired, try silent refresh now that GIS is ready
+    if (_GDS.user && !this._hasValidToken()) {
+      var self = this;
+      this._refreshTokenSilently()
+        .then(function() {
+          _gdsSetStatus('');
+          return _gdsSyncAllPending();
+        })
+        .then(function() {
+          // Re-trigger onSignIn so the app can reload from Drive with a fresh token
+          if (self.callbacks.onSignIn) self.callbacks.onSignIn();
+        })
+        .catch(function() {
+          _gdsSetStatus('Tap to sync', false, true);
+        });
     }
   }
 
   signIn() {
-    if (!this.tokenClient) {
+    if (!_GDS.tokenClient) {
       this._setSyncStatus('Google Sign-In not ready', true);
       return;
     }
-    this._silentRefresh = false;
-    this.tokenClient.requestAccessToken({ prompt: 'consent' });
+    _GDS._isSignIn = true;
+    _GDS._isReconnect = false;
+    _GDS.tokenClient.requestAccessToken({ prompt: 'consent' });
   }
 
   signOut() {
-    if (this.accessToken) {
-      google.accounts.oauth2.revoke(this.accessToken);
+    if (_GDS.accessToken) {
+      google.accounts.oauth2.revoke(_GDS.accessToken);
     }
-    this.accessToken = null;
-    this.driveFileId = null;
-    this.currentUser = null;
-    localStorage.removeItem(this._userCacheKey);
-    localStorage.removeItem(this._tokenCacheKey);
-    localStorage.removeItem(this._fileIdCacheKey);
+    _GDS.user = null;
+    _GDS.accessToken = null;
+    _GDS.tokenExpiry = 0;
+
+    // Clear all gds- keys from localStorage
+    var keysToRemove = [];
+    for (var i = 0; i < localStorage.length; i++) {
+      var key = localStorage.key(i);
+      if (key && key.indexOf('gds-') === 0) keysToRemove.push(key);
+    }
+    keysToRemove.forEach(function(k) { localStorage.removeItem(k); });
+
+    // Reset instance state
+    _gdsInstances.forEach(function(inst) {
+      inst.driveFileId = null;
+    });
+
     this._showSignedOut();
     this._setSyncStatus('');
     if (this.callbacks.onSignOut) this.callbacks.onSignOut();
   }
 
-  _handleTokenResponse(response) {
-    var wasSilent = this._silentRefresh;
-    this._silentRefresh = false;
+  // =============================================
+  // Token management
+  // =============================================
 
-    if (response.error) {
-      if (wasSilent) {
-        // Silent refresh failed — clear session and show sign-in button
-        this.currentUser = null;
-        this.accessToken = null;
-        localStorage.removeItem(this._userCacheKey);
-        localStorage.removeItem(this._tokenCacheKey);
-        this._showSignedOut();
-        this._setSyncStatus('');
-      }
+  _hasValidToken() {
+    return !!_GDS.accessToken && _GDS.tokenExpiry > Date.now();
+  }
+
+  _refreshTokenSilently() {
+    if (_GDS.pendingToken) return _GDS.pendingToken;
+    if (!_GDS.tokenClient) return Promise.reject(new Error('GIS not ready'));
+
+    var p = new Promise(function(resolve, reject) {
+      _GDS._resolve = resolve;
+      _GDS._reject = reject;
+    });
+    _GDS.pendingToken = p;
+    _GDS._isSignIn = false;
+    _GDS._isReconnect = false;
+    _GDS.tokenClient.requestAccessToken({ prompt: '' });
+    return p;
+  }
+
+  _reconnect() {
+    if (!_GDS.tokenClient) return;
+    _GDS._isReconnect = true;
+    _GDS._isSignIn = false;
+    this._setSyncStatus('Connecting...');
+    _GDS.tokenClient.requestAccessToken({ prompt: 'consent' });
+  }
+
+  // =============================================
+  // Data caching (localStorage)
+  // =============================================
+
+  _cacheData(data) {
+    try {
+      localStorage.setItem(this._dataCacheKey, JSON.stringify(data));
+    } catch (e) {}
+  }
+
+  getCachedData() {
+    try {
+      var raw = localStorage.getItem(this._dataCacheKey);
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  _markDirty() {
+    try { localStorage.setItem(this._dirtyKey, '1'); } catch (e) {}
+  }
+
+  _clearDirty() {
+    localStorage.removeItem(this._dirtyKey);
+  }
+
+  _isDirty() {
+    return !!localStorage.getItem(this._dirtyKey);
+  }
+
+  async _syncPendingChanges() {
+    if (!this._isDirty() || !this._hasValidToken()) return;
+    var data = this.getCachedData();
+    if (data === null) {
+      this._clearDirty();
       return;
     }
-
-    this.accessToken = response.access_token;
-
-    // Cache the token with its expiry (typically ~3600 seconds)
-    var expiresAt = Date.now() + ((response.expires_in || 3600) * 1000);
-    localStorage.setItem(this._tokenCacheKey, JSON.stringify({
-      accessToken: this.accessToken,
-      expiresAt: expiresAt
-    }));
-
-    // Fetch user profile
-    fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
-      headers: { Authorization: 'Bearer ' + this.accessToken }
-    })
-    .then(function(r) { return r.json(); })
-    .then(function(profile) {
-      this.currentUser = {
-        name: profile.given_name || profile.name,
-        picture: profile.picture
-      };
-      localStorage.setItem(this._userCacheKey, JSON.stringify(this.currentUser));
-      this._showSignedIn();
-      if (this.callbacks.onSignIn) this.callbacks.onSignIn();
-    }.bind(this))
-    .catch(function() {
-      // Token works but profile fetch failed — still sign in
-      if (!this.currentUser) {
-        this.currentUser = { name: 'Signed In', picture: '' };
-      }
-      localStorage.setItem(this._userCacheKey, JSON.stringify(this.currentUser));
-      this._showSignedIn();
-      if (this.callbacks.onSignIn) this.callbacks.onSignIn();
-    }.bind(this));
-  }
-
-  _showSignedIn() {
-    if (!this.authContainer) return;
-    this.authContainer.querySelector('#gds-signed-out').style.display = 'none';
-    this.authContainer.querySelector('#gds-signed-in').style.display = 'flex';
-    if (this.currentUser) {
-      this.authContainer.querySelector('#gds-name').textContent = this.currentUser.name;
-      var avatar = this.authContainer.querySelector('#gds-avatar');
-      if (this.currentUser.picture) {
-        avatar.src = this.currentUser.picture;
-        avatar.style.display = 'block';
+    try {
+      if (this.driveFileId) {
+        await this._updateDriveFile(this.driveFileId, data);
       } else {
-        avatar.style.display = 'none';
+        this.driveFileId = await this._createDriveFile(data);
+        localStorage.setItem(this._fileIdCacheKey, this.driveFileId);
       }
-    }
-  }
-
-  _showSignedOut() {
-    if (!this.authContainer) return;
-    this.authContainer.querySelector('#gds-signed-out').style.display = 'flex';
-    this.authContainer.querySelector('#gds-signed-in').style.display = 'none';
-  }
-
-  _setSyncStatus(msg, isError) {
-    if (!this.authContainer) return;
-    var el = this.authContainer.querySelector('#gds-sync-status');
-    if (el) {
-      el.textContent = msg;
-      el.className = 'gds-sync-status' + (isError ? ' error' : '');
+      this._clearDirty();
+    } catch (e) {
+      // Will retry on next sync opportunity
     }
   }
 
   // =============================================
-  // Save (Drive only)
+  // Save (localStorage + Drive)
   // =============================================
 
   async save(data) {
-    if (!this.accessToken) return;
+    this._cacheData(data);
+
+    if (!this._hasValidToken()) {
+      this._markDirty();
+      return;
+    }
 
     try {
       if (this.driveFileId) {
@@ -277,15 +404,86 @@ class GoogleDriveStorage {
         this.driveFileId = await this._createDriveFile(data);
         localStorage.setItem(this._fileIdCacheKey, this.driveFileId);
       }
-      this._setSyncStatus('Saved');
+      this._clearDirty();
+      _gdsSetStatus('Saved');
     } catch (e) {
-      console.error('Drive save error:', e);
       if (e.message === 'token_expired') {
-        this._onTokenExpired();
+        _GDS.accessToken = null;
+        _GDS.tokenExpiry = 0;
+        localStorage.removeItem(_GDS.TOKEN_KEY);
+        this._markDirty();
+        _gdsSetStatus('Tap to sync', false, true);
       } else {
-        this._setSyncStatus('Save failed', true);
+        this._markDirty();
       }
     }
+  }
+
+  // =============================================
+  // Load from Drive (with localStorage fallback)
+  // =============================================
+
+  async loadFromDrive(_retried) {
+    if (this._hasValidToken()) {
+      // If we have unsynced local changes, push them to Drive first
+      if (this._isDirty()) {
+        var localData = this.getCachedData();
+        if (localData !== null) {
+          try {
+            if (this.driveFileId) {
+              await this._updateDriveFile(this.driveFileId, localData);
+            } else {
+              this.driveFileId = await this._createDriveFile(localData);
+              localStorage.setItem(this._fileIdCacheKey, this.driveFileId);
+            }
+            this._clearDirty();
+          } catch (e) {
+            if (e.message === 'token_expired') {
+              _GDS.accessToken = null;
+              _GDS.tokenExpiry = 0;
+              localStorage.removeItem(_GDS.TOKEN_KEY);
+            }
+          }
+          return localData;
+        }
+      }
+
+      // No pending local changes — load from Drive
+      try {
+        if (!this.driveFileId) {
+          this.driveFileId = await this._findDriveFile();
+          if (this.driveFileId) {
+            localStorage.setItem(this._fileIdCacheKey, this.driveFileId);
+          }
+        }
+
+        if (this.driveFileId) {
+          var data = await this._readDriveFile(this.driveFileId);
+          this._cacheData(data);
+          return data;
+        }
+
+        return null;
+      } catch (e) {
+        if (e.message === 'token_expired') {
+          _GDS.accessToken = null;
+          _GDS.tokenExpiry = 0;
+          localStorage.removeItem(_GDS.TOKEN_KEY);
+        } else if (!_retried && this.driveFileId) {
+          // Cached file ID might be stale — clear and retry once
+          localStorage.removeItem(this._fileIdCacheKey);
+          this.driveFileId = null;
+          return this.loadFromDrive(true);
+        }
+      }
+    }
+
+    // No valid token — return cached data
+    return this.getCachedData();
+  }
+
+  isSignedIn() {
+    return !!_GDS.user;
   }
 
   // =============================================
@@ -295,21 +493,12 @@ class GoogleDriveStorage {
   async _driveRequest(url, options) {
     options = options || {};
     options.headers = options.headers || {};
-    options.headers['Authorization'] = 'Bearer ' + this.accessToken;
+    options.headers['Authorization'] = 'Bearer ' + _GDS.accessToken;
     var r = await fetch(url, options);
     if (r.status === 401) {
-      // Token was revoked or is invalid — clear it
-      this.accessToken = null;
-      localStorage.removeItem(this._tokenCacheKey);
       throw new Error('token_expired');
     }
     return r;
-  }
-
-  _onTokenExpired() {
-    this.accessToken = null;
-    localStorage.removeItem(this._tokenCacheKey);
-    this._setSyncStatus('Session expired — please sign in again', true);
   }
 
   async _findDriveFile() {
@@ -347,54 +536,58 @@ class GoogleDriveStorage {
       {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
+        body: JSON.stringify(data),
       }
     );
   }
 
   // =============================================
-  // Load from Drive
+  // UI helpers
   // =============================================
 
-  async loadFromDrive() {
-    if (!this.accessToken) return null;
-    this._setSyncStatus('Loading...');
-
-    try {
-      // Use cached file ID if available, otherwise search for it
-      if (!this.driveFileId) {
-        this.driveFileId = await this._findDriveFile();
-        if (this.driveFileId) {
-          localStorage.setItem(this._fileIdCacheKey, this.driveFileId);
-        }
-      }
-
-      if (this.driveFileId) {
-        var data = await this._readDriveFile(this.driveFileId);
-        this._setSyncStatus('');
-        return data;
+  _showSignedIn() {
+    if (!this.authContainer) return;
+    this.authContainer.querySelector('#gds-signed-out').style.display = 'none';
+    this.authContainer.querySelector('#gds-signed-in').style.display = 'flex';
+    if (_GDS.user) {
+      this.authContainer.querySelector('#gds-name').textContent = _GDS.user.name;
+      var avatar = this.authContainer.querySelector('#gds-avatar');
+      if (_GDS.user.picture) {
+        avatar.src = _GDS.user.picture;
+        avatar.style.display = 'block';
       } else {
-        this._setSyncStatus('');
-        return null;
+        avatar.style.display = 'none';
       }
-    } catch (e) {
-      console.error('Drive load error:', e);
-      if (e.message === 'token_expired') {
-        this._onTokenExpired();
-      } else {
-        // If cached file ID was stale, clear it and retry once
-        if (this.driveFileId && localStorage.getItem(this._fileIdCacheKey)) {
-          localStorage.removeItem(this._fileIdCacheKey);
-          this.driveFileId = null;
-          return this.loadFromDrive();
-        }
-        this._setSyncStatus('Failed to load', true);
-      }
-      return null;
     }
   }
 
-  isSignedIn() {
-    return !!this.accessToken;
+  _showSignedOut() {
+    if (!this.authContainer) return;
+    this.authContainer.querySelector('#gds-signed-out').style.display = 'flex';
+    this.authContainer.querySelector('#gds-signed-in').style.display = 'none';
+  }
+
+  _setSyncStatus(msg, isError, isClickable) {
+    if (!this.authContainer) return;
+    var el = this.authContainer.querySelector('#gds-sync-status');
+    if (!el) return;
+
+    el.textContent = msg;
+    el.className = 'gds-sync-status' +
+      (isError ? ' error' : '') +
+      (isClickable ? ' clickable' : '');
+
+    // Remove old click handler
+    if (el._gdsHandler) {
+      el.removeEventListener('click', el._gdsHandler);
+      el._gdsHandler = null;
+    }
+
+    // Add click handler for "Tap to sync"
+    if (isClickable && !isError) {
+      var self = this;
+      el._gdsHandler = function() { self._reconnect(); };
+      el.addEventListener('click', el._gdsHandler);
+    }
   }
 }
