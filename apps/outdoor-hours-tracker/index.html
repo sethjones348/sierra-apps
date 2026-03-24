@@ -376,11 +376,6 @@
       padding: 2rem 0;
     }
 
-    .history-item-left {
-      flex: 1;
-      min-width: 0;
-    }
-
     .history-item-right {
       display: flex;
       align-items: center;
@@ -565,6 +560,66 @@
       object-fit: cover;
     }
 
+    /* Edit modal */
+    .edit-modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(44, 44, 44, 0.4);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+
+    .edit-modal-overlay.open {
+      display: flex;
+    }
+
+    .edit-modal {
+      background: #FAF8F5;
+      border-radius: 12px;
+      padding: 2rem 1.5rem;
+      width: 100%;
+      max-width: 420px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .edit-modal h2 {
+      font-family: 'Playfair Display', serif;
+      font-weight: 400;
+      font-size: 1.2rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      text-align: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .edit-form {
+      display: flex;
+      flex-direction: column;
+      gap: 1.2rem;
+    }
+
+    .edit-btn-row {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      margin-top: 0.5rem;
+    }
+
+    .history-item-left {
+      flex: 1;
+      min-width: 0;
+      cursor: pointer;
+      -webkit-tap-highlight-color: rgba(0, 0, 0, 0.05);
+    }
+
+    .history-item-left:active {
+      opacity: 0.6;
+    }
+
     /* Back link */
     .back-link {
       display: inline-block;
@@ -717,6 +772,31 @@
           <div class="bulk-btn-row">
             <button class="btn btn-danger" onclick="closeBulkModal()">Cancel</button>
             <button class="btn btn-primary" onclick="submitBulk()">Add All</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Edit entry modal -->
+    <div class="edit-modal-overlay" id="editOverlay" onclick="closeEditModal(event)">
+      <div class="edit-modal" onclick="event.stopPropagation()">
+        <h2>Edit Entry</h2>
+        <div class="edit-form">
+          <div class="input-group">
+            <label>Date</label>
+            <input type="date" id="editDate">
+          </div>
+          <div class="input-group">
+            <label>Hours</label>
+            <input type="number" id="editHours" placeholder="e.g. 2.5" min="0" step="0.25">
+          </div>
+          <div class="input-group">
+            <label>Note (optional)</label>
+            <input type="text" id="editNote" placeholder="e.g. Park walk">
+          </div>
+          <div class="edit-btn-row">
+            <button class="btn btn-danger" onclick="closeEditModal()">Cancel</button>
+            <button class="btn btn-primary" onclick="saveEditEntry()">Save</button>
           </div>
         </div>
       </div>
@@ -949,6 +1029,51 @@
       renderAll();
     }
 
+    // --- Edit ---
+    let editingEntryId = null;
+
+    function editEntry(id) {
+      const entry = entries.find(e => e.id === id);
+      if (!entry) return;
+      editingEntryId = id;
+      document.getElementById('editDate').value = entry.date;
+      document.getElementById('editHours').value = entry.hours;
+      document.getElementById('editNote').value = entry.note || '';
+      document.getElementById('editOverlay').classList.add('open');
+    }
+
+    function closeEditModal(e) {
+      if (e && e.target !== document.getElementById('editOverlay')) return;
+      editingEntryId = null;
+      document.getElementById('editOverlay').classList.remove('open');
+    }
+
+    function saveEditEntry() {
+      const entry = entries.find(e => e.id === editingEntryId);
+      if (!entry) return;
+
+      const date = document.getElementById('editDate').value;
+      const hours = parseFloat(document.getElementById('editHours').value);
+      const note = document.getElementById('editNote').value.trim();
+
+      if (!date || isNaN(hours) || hours <= 0) return;
+
+      entry.date = date;
+      entry.hours = Math.round(hours * 100) / 100;
+      entry.note = note;
+
+      // Re-sort by date descending
+      entries.sort((a, b) => {
+        if (a.date !== b.date) return b.date.localeCompare(a.date);
+        return b.id - a.id;
+      });
+
+      saveData();
+      renderAll();
+      editingEntryId = null;
+      document.getElementById('editOverlay').classList.remove('open');
+    }
+
     // --- Rendering ---
     function renderAll() {
       renderTotal();
@@ -1013,7 +1138,7 @@
           : '';
 
         return '<div class="history-item">' +
-          '<div class="history-item-left">' +
+          '<div class="history-item-left" onclick="editEntry(' + e.id + ')">' +
             '<div class="history-date">' + formatted + '</div>' +
             noteHtml +
             thumbsHtml +
