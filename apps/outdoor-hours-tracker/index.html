@@ -408,27 +408,6 @@
 
     .delete-btn:active { opacity: 0.5; }
 
-    .clear-all-row {
-      text-align: center;
-      margin-top: 1.5rem;
-    }
-
-    .clear-all-btn {
-      font-family: 'DM Sans', sans-serif;
-      background: none;
-      border: none;
-      color: #C4A68A;
-      font-size: 0.7rem;
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
-      cursor: pointer;
-      padding: 0.5rem 1rem;
-      min-height: 44px;
-      transition: opacity 0.2s ease;
-    }
-
-    .clear-all-btn:active { opacity: 0.5; }
-
     /* Bulk add */
     .bulk-section {
       padding: 2rem 0;
@@ -778,9 +757,6 @@
       <div class="history-list" id="historyList">
         <div class="history-empty">No entries yet</div>
       </div>
-      <div class="clear-all-row" id="clearAllRow" style="display:none;">
-        <button class="clear-all-btn" onclick="clearAll()">Clear All History</button>
-      </div>
     </div>
 
     </div><!-- /appContent -->
@@ -973,14 +949,6 @@
       renderAll();
     }
 
-    function clearAll() {
-      if (confirm('Clear all history? This cannot be undone.')) {
-        entries = [];
-        saveData();
-        renderAll();
-      }
-    }
-
     // --- Rendering ---
     function renderAll() {
       renderTotal();
@@ -1019,15 +987,11 @@
 
     function renderHistory() {
       const list = document.getElementById('historyList');
-      const clearRow = document.getElementById('clearAllRow');
 
       if (entries.length === 0) {
         list.innerHTML = '<div class="history-empty">No entries yet</div>';
-        clearRow.style.display = 'none';
         return;
       }
-
-      clearRow.style.display = 'block';
 
       list.innerHTML = entries.map(e => {
         const dateObj = new Date(e.date + 'T12:00:00');
