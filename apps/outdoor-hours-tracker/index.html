@@ -805,6 +805,9 @@
   <script>
     // --- State ---
     let entries = [];
+    let photos = [];
+    let pendingPhotoData = null;
+    let pendingPhotoDate = null;
     let stopwatchInterval = null;
     let stopwatchStartTime = null;
     let stopwatchElapsed = 0;
@@ -1155,11 +1158,7 @@
       document.getElementById('bulkOverlay').classList.remove('open');
     }
 
-    // --- Photo storage ---
-    let photos = [];
-    let pendingPhotoData = null;
-    let pendingPhotoDate = null;
-
+    // --- Photo functions ---
     function resizeImage(file, maxWidth, callback) {
       const reader = new FileReader();
       reader.onload = function(e) {
