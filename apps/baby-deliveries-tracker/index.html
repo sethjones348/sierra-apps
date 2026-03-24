@@ -74,6 +74,32 @@
       margin-bottom: 0.5rem;
     }
 
+    .loading-state {
+      display: none;
+      text-align: center;
+      padding: 5rem 1.5rem;
+    }
+
+    .loading-spinner {
+      width: 24px;
+      height: 24px;
+      border: 2px solid #E8E4DF;
+      border-top-color: #C5A46D;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 0.8rem;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loading-text {
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: #8A8478;
+      font-weight: 400;
+    }
+
     /* Stats Dashboard */
     .stats-grid {
       display: grid;
@@ -312,6 +338,11 @@
       <p>Sign in to track your baby deliveries</p>
     </div>
 
+    <div class="loading-state" id="loadingState">
+      <div class="loading-spinner"></div>
+      <div class="loading-text">Preparing...</div>
+    </div>
+
     <div id="appContent" style="display:none;">
 
       <!-- Stats Dashboard -->
@@ -410,23 +441,45 @@
   </div>
 
   <script>
-    const storage = new GoogleDriveStorage('baby-deliveries-data.json');
     let deliveries = [];
+    const storage = new GoogleDriveStorage('baby-deliveries-data.json');
 
     document.getElementById('gds-styles').textContent = GoogleDriveStorage.getStyles();
 
     storage.renderAuthUI(document.getElementById('authSection'), {
       onSignIn: async () => {
-        const data = await storage.loadFromDrive();
-        deliveries = (data && Array.isArray(data)) ? data : [];
-        document.getElementById('signinPrompt').style.display = 'none';
-        document.getElementById('appContent').style.display = 'block';
-        render();
+        var cached = storage.getCachedData();
+
+        if (cached !== null) {
+          deliveries = Array.isArray(cached) ? cached : [];
+          document.getElementById('signinPrompt').style.display = 'none';
+          document.getElementById('loadingState').style.display = 'none';
+          document.getElementById('appContent').style.display = 'block';
+          render();
+
+          var fresh = await storage.loadFromDrive();
+          if (fresh !== null) {
+            deliveries = Array.isArray(fresh) ? fresh : [];
+            render();
+          }
+        } else {
+          document.getElementById('signinPrompt').style.display = 'none';
+          document.getElementById('appContent').style.display = 'none';
+          document.getElementById('loadingState').style.display = 'block';
+
+          var data = await storage.loadFromDrive();
+          deliveries = (data && Array.isArray(data)) ? data : [];
+
+          document.getElementById('loadingState').style.display = 'none';
+          document.getElementById('appContent').style.display = 'block';
+          render();
+        }
       },
       onSignOut: () => {
         deliveries = [];
-        document.getElementById('signinPrompt').style.display = 'block';
+        document.getElementById('loadingState').style.display = 'none';
         document.getElementById('appContent').style.display = 'none';
+        document.getElementById('signinPrompt').style.display = 'block';
       }
     });
 
