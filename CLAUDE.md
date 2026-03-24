@@ -207,12 +207,25 @@ The Google OAuth Client ID is: `437861067044-r6m2ndd5bqgd0u82f1rjq8a3nv91fc3q.ap
    <script src="/sierra-apps/shared/google-drive-storage.js"></script>
    ```
 
-2. Add a `<style>` tag for the auth UI styles:
+2. Add a `<style>` tag for the auth UI styles and loading state:
    ```html
    <style id="gds-styles"></style>
+   <style>
+     .loading-state { display: none; text-align: center; padding: 5rem 1.5rem; }
+     .loading-spinner {
+       width: 24px; height: 24px; border: 2px solid #E8E4DF;
+       border-top-color: #C5A46D; border-radius: 50%;
+       animation: spin 0.8s linear infinite; margin: 0 auto 0.8rem;
+     }
+     @keyframes spin { to { transform: rotate(360deg); } }
+     .loading-text {
+       font-size: 0.7rem; letter-spacing: 0.2em; text-transform: uppercase;
+       color: #8A8478; font-weight: 400;
+     }
+   </style>
    ```
 
-3. Add an auth container and sign-in prompt in the HTML:
+3. Add an auth container, sign-in prompt, loading state, and app content in the HTML:
    ```html
    <div id="authSection"></div>
 
@@ -221,39 +234,68 @@ The Google OAuth Client ID is: `437861067044-r6m2ndd5bqgd0u82f1rjq8a3nv91fc3q.ap
      <p>Sign in to see your data</p>
    </div>
 
+   <!-- Loading state (shown while data loads on first visit) -->
+   <div class="loading-state" id="loadingState">
+     <div class="loading-spinner"></div>
+     <div class="loading-text">Gathering...</div>
+   </div>
+
    <!-- Hidden until signed in -->
    <div id="appContent" style="display:none;">
      <!-- Your app content here -->
    </div>
    ```
 
-4. In your app's JavaScript, initialize and use:
+4. In your app's JavaScript, declare ALL state variables and storage instances BEFORE calling `renderAuthUI`. The `onSignIn` callback is called synchronously during initialization, so any variables it references must already be declared.
+
    ```javascript
-   // Each app uses its own unique file name in Drive
+   // --- State (MUST be declared before renderAuthUI) ---
+   let myData = defaultValue;
+
+   // --- Storage instances (MUST be declared before renderAuthUI) ---
    const storage = new GoogleDriveStorage('my-app-data.json');
 
    // Inject the auth UI styles
    document.getElementById('gds-styles').textContent = GoogleDriveStorage.getStyles();
 
    // Render the sign-in/sign-out UI
+   // NOTE: onSignIn may be called more than once (once with cached data on
+   // page load, again after a background token refresh loads fresh Drive data).
+   // This is normal — treat it as idempotent.
    storage.renderAuthUI(document.getElementById('authSection'), {
      onSignIn: async () => {
-       // Load from Drive if token available, otherwise from localStorage cache
-       // NOTE: onSignIn may be called more than once (once with cached data on
-       // page load, again after a background token refresh loads fresh Drive data).
-       // This is normal — treat it as idempotent.
-       myData = await storage.loadFromDrive() || defaultValue;
+       // Try cached data first for instant render (no spinner)
+       var cached = storage.getCachedData();
 
-       // Show app content
-       document.getElementById('signinPrompt').style.display = 'none';
-       document.getElementById('appContent').style.display = 'block';
-       render();
+       if (cached !== null) {
+         // Cache hit — show instantly, then refresh from Drive in background
+         myData = cached;
+         document.getElementById('signinPrompt').style.display = 'none';
+         document.getElementById('loadingState').style.display = 'none';
+         document.getElementById('appContent').style.display = 'block';
+         render();
+
+         // Background refresh from Drive
+         var fresh = await storage.loadFromDrive();
+         if (fresh !== null) { myData = fresh; render(); }
+       } else {
+         // No cache — show loading spinner while loading from Drive
+         document.getElementById('signinPrompt').style.display = 'none';
+         document.getElementById('appContent').style.display = 'none';
+         document.getElementById('loadingState').style.display = 'block';
+
+         myData = await storage.loadFromDrive() || defaultValue;
+
+         document.getElementById('loadingState').style.display = 'none';
+         document.getElementById('appContent').style.display = 'block';
+         render();
+       }
      },
      onSignOut: () => {
-       // Clear state and hide app content
        myData = defaultValue;
-       document.getElementById('signinPrompt').style.display = 'block';
+       document.getElementById('loadingState').style.display = 'none';
        document.getElementById('appContent').style.display = 'none';
+       document.getElementById('signinPrompt').style.display = 'block';
      }
    });
 
@@ -266,8 +308,10 @@ The Google OAuth Client ID is: `437861067044-r6m2ndd5bqgd0u82f1rjq8a3nv91fc3q.ap
 - **Every piece of app data that needs to persist MUST be stored in Google Drive** via a `GoogleDriveStorage` instance. If you're adding a new data model (e.g., photos, settings, categories), create a new `GoogleDriveStorage('my-app-newmodel.json')` instance for it and use `save()` / `loadFromDrive()`. Do not store data only in JavaScript variables or only in localStorage — it must round-trip through Drive.
 - Each app MUST use a **unique file name** for its Drive file (e.g., `outdoor-hours-data.json`, `budget-data.json`)
 - **Do not manually manage localStorage for app data.** The shared library handles all caching (data, auth, file IDs, dirty flags) internally.
+- **Declare ALL state variables and `GoogleDriveStorage` instances BEFORE calling `renderAuthUI`.** The `onSignIn` callback runs synchronously during `_initAuth`, so any variable it references must already be initialized — otherwise you get a temporal dead zone `ReferenceError`.
+- **Always use cache-first rendering in `onSignIn`.** Check `storage.getCachedData()` first. If cached data exists, render instantly (no spinner), then refresh from Drive in the background. Only show the loading spinner on first visit when no cache exists.
 - App content must be **hidden until the user signs in** — show a friendly sign-in prompt instead
-- On sign-out, **clear all in-memory state** and hide app content. The shared library clears all `gds-*` localStorage keys automatically.
+- On sign-out, **clear all in-memory state**, hide app content AND the loading state, and show the sign-in prompt. The shared library clears all `gds-*` localStorage keys automatically.
 - The sign-in button, sync status, and "Tap to sync" reconnect are handled automatically by the shared library
 - The OAuth Client ID is configured for the origin `https://sethjones348.github.io` — no per-app setup needed
 - Multiple pages in the same app (e.g., `index.html` and `album.html`) each create their own `GoogleDriveStorage` instance — this is fine, they share the same auth state via the `_GDS` global and the same cached token via localStorage
