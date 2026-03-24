@@ -266,6 +266,33 @@
 
     .month-header:first-child { margin-top: 0; }
 
+    /* Loading state */
+    .loading-state {
+      display: none;
+      text-align: center;
+      padding: 5rem 1.5rem;
+    }
+
+    .loading-spinner {
+      width: 24px;
+      height: 24px;
+      border: 2px solid #E8E4DF;
+      border-top-color: #C5A46D;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 0.8rem;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loading-text {
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: #8A8478;
+      font-weight: 400;
+    }
+
     /* Sign-in prompt */
     .signin-prompt {
       text-align: center;
@@ -292,6 +319,12 @@
     <!-- Sign-in prompt -->
     <div class="signin-prompt" id="signinPrompt">
       <p class="signin-prompt-text">Sign in to see your photos</p>
+    </div>
+
+    <!-- Loading state -->
+    <div class="loading-state" id="loadingState">
+      <div class="loading-spinner"></div>
+      <div class="loading-text">Curating...</div>
     </div>
 
     <!-- Gallery (hidden until signed in) -->
@@ -341,15 +374,34 @@
 
     photoStorage.renderAuthUI(document.getElementById('authSection'), {
       onSignIn: async () => {
-        photos = await photoStorage.loadFromDrive() || [];
-        document.getElementById('signinPrompt').style.display = 'none';
-        document.getElementById('appContent').style.display = 'block';
-        renderGallery();
+        var cachedPhotos = photoStorage.getCachedData();
+
+        if (cachedPhotos !== null) {
+          photos = cachedPhotos;
+          document.getElementById('signinPrompt').style.display = 'none';
+          document.getElementById('loadingState').style.display = 'none';
+          document.getElementById('appContent').style.display = 'block';
+          renderGallery();
+
+          var freshPhotos = await photoStorage.loadFromDrive();
+          if (freshPhotos !== null) { photos = freshPhotos; renderGallery(); }
+        } else {
+          document.getElementById('signinPrompt').style.display = 'none';
+          document.getElementById('appContent').style.display = 'none';
+          document.getElementById('loadingState').style.display = 'block';
+
+          photos = await photoStorage.loadFromDrive() || [];
+
+          document.getElementById('loadingState').style.display = 'none';
+          document.getElementById('appContent').style.display = 'block';
+          renderGallery();
+        }
       },
       onSignOut: () => {
         photos = [];
-        document.getElementById('signinPrompt').style.display = 'block';
+        document.getElementById('loadingState').style.display = 'none';
         document.getElementById('appContent').style.display = 'none';
+        document.getElementById('signinPrompt').style.display = 'block';
       }
     });
 

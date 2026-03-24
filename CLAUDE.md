@@ -115,6 +115,28 @@ Once enabled, everything pushed to `main` is live at `https://sethjones348.githu
 - Inputs: clean underline or thin border style, not chunky.
 - Icons: thin line-weight icons (use Lucide or Feather icons via CDN).
 
+**Loading states:**
+- Any time the app is waiting for data (Drive load, save, sign-in), show a centered loading indicator.
+- Use a small CSS spinner (thin border, `border-top` colored with muted gold `#C5A46D`) with a cute word underneath in uppercase letter-spaced text.
+- Example words: "Gathering...", "Curating...", "Preparing...", "Refreshing..." — pick one that fits the context.
+- The spinner + word should be centered in the content area and match the app's aesthetic (light weight, muted colors, generous spacing).
+- Standard CSS spinner pattern:
+  ```css
+  .loading-spinner {
+    width: 24px; height: 24px;
+    border: 2px solid #E8E4DF;
+    border-top-color: #C5A46D;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 0.8rem;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text {
+    font-size: 0.7rem; letter-spacing: 0.2em; text-transform: uppercase;
+    color: #8A8478; font-weight: 400; text-align: center;
+  }
+  ```
+
 **Interactions:**
 - Subtle transitions (0.2s ease) on hover/active states.
 - Avoid flashy animations. Elegance over excitement.
@@ -241,6 +263,7 @@ The Google OAuth Client ID is: `437861067044-r6m2ndd5bqgd0u82f1rjq8a3nv91fc3q.ap
 
 ### Important notes
 
+- **Every piece of app data that needs to persist MUST be stored in Google Drive** via a `GoogleDriveStorage` instance. If you're adding a new data model (e.g., photos, settings, categories), create a new `GoogleDriveStorage('my-app-newmodel.json')` instance for it and use `save()` / `loadFromDrive()`. Do not store data only in JavaScript variables or only in localStorage — it must round-trip through Drive.
 - Each app MUST use a **unique file name** for its Drive file (e.g., `outdoor-hours-data.json`, `budget-data.json`)
 - **Do not manually manage localStorage for app data.** The shared library handles all caching (data, auth, file IDs, dirty flags) internally.
 - App content must be **hidden until the user signs in** — show a friendly sign-in prompt instead

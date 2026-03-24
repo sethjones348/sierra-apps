@@ -600,6 +600,33 @@
 
     .back-link:active { opacity: 0.5; }
 
+    /* Loading state */
+    .loading-state {
+      display: none;
+      text-align: center;
+      padding: 5rem 1.5rem;
+    }
+
+    .loading-spinner {
+      width: 24px;
+      height: 24px;
+      border: 2px solid #E8E4DF;
+      border-top-color: #C5A46D;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 0.8rem;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loading-text {
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: #8A8478;
+      font-weight: 400;
+    }
+
     /* Sign-in prompt */
     .signin-prompt {
       text-align: center;
@@ -627,6 +654,12 @@
     <!-- Sign-in prompt (shown when not signed in) -->
     <div class="signin-prompt" id="signinPrompt">
       <p class="signin-prompt-text">Sign in to track and see your hours</p>
+    </div>
+
+    <!-- Loading state (shown while data is loading) -->
+    <div class="loading-state" id="loadingState">
+      <div class="loading-spinner"></div>
+      <div class="loading-text">Gathering...</div>
     </div>
 
     <!-- App content (hidden until signed in) -->
@@ -786,21 +819,46 @@
     // Render auth UI
     storage.renderAuthUI(document.getElementById('authSection'), {
       onSignIn: async () => {
-        // Load data from Drive (falls back to localStorage cache if no token)
-        entries = await storage.loadFromDrive() || [];
-        photos = await photoStorage.loadFromDrive() || [];
+        // Try cached data first for instant render
+        var cachedEntries = storage.getCachedData();
+        var cachedPhotos = photoStorage.getCachedData();
 
-        // Show app content
-        document.getElementById('signinPrompt').style.display = 'none';
-        document.getElementById('appContent').style.display = 'block';
-        renderAll();
+        if (cachedEntries !== null) {
+          // Cached data exists — show instantly, no spinner
+          entries = cachedEntries;
+          photos = cachedPhotos || [];
+          document.getElementById('signinPrompt').style.display = 'none';
+          document.getElementById('loadingState').style.display = 'none';
+          document.getElementById('appContent').style.display = 'block';
+          renderAll();
+
+          // Still load from Drive in background to get fresh data
+          var freshEntries = await storage.loadFromDrive();
+          var freshPhotos = await photoStorage.loadFromDrive();
+          if (freshEntries !== null) { entries = freshEntries; }
+          if (freshPhotos !== null) { photos = freshPhotos; }
+          renderAll();
+        } else {
+          // No cache — show loading spinner
+          document.getElementById('signinPrompt').style.display = 'none';
+          document.getElementById('appContent').style.display = 'none';
+          document.getElementById('loadingState').style.display = 'block';
+
+          entries = await storage.loadFromDrive() || [];
+          photos = await photoStorage.loadFromDrive() || [];
+
+          document.getElementById('loadingState').style.display = 'none';
+          document.getElementById('appContent').style.display = 'block';
+          renderAll();
+        }
       },
       onSignOut: () => {
         // Clear local state and hide app content
         entries = [];
         photos = [];
-        document.getElementById('signinPrompt').style.display = 'block';
+        document.getElementById('loadingState').style.display = 'none';
         document.getElementById('appContent').style.display = 'none';
+        document.getElementById('signinPrompt').style.display = 'block';
       }
     });
 
