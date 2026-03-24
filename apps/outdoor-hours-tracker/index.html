@@ -812,6 +812,7 @@
 
     // --- Google Drive Storage (single source of truth) ---
     const storage = new GoogleDriveStorage('outdoor-hours-data.json');
+    const photoStorage = new GoogleDriveStorage('outdoor-hours-photos.json');
 
     // Inject shared auth styles
     document.getElementById('gds-styles').textContent = GoogleDriveStorage.getStyles();
@@ -1155,7 +1156,6 @@
     }
 
     // --- Photo storage ---
-    const photoStorage = new GoogleDriveStorage('outdoor-hours-photos.json');
     let photos = [];
     let pendingPhotoData = null;
     let pendingPhotoDate = null;
