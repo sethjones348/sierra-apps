@@ -253,6 +253,216 @@
 
     .lightbox-close:active { opacity: 0.4; }
 
+    /* Year in Review compilation */
+    .compilation-section {
+      text-align: center;
+      padding: 1.5rem 0 0.5rem;
+    }
+
+    .compilation-btn {
+      font-family: 'DM Sans', sans-serif;
+      background: none;
+      border: 1px solid #C5A46D;
+      color: #C5A46D;
+      font-size: 0.7rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 0.7rem 1.8rem;
+      border-radius: 30px;
+      cursor: pointer;
+      min-height: 44px;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .compilation-btn:hover { background: #C5A46D; color: #FAF8F5; }
+    .compilation-btn:active { opacity: 0.7; }
+    .compilation-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .compilation-btn svg { width: 16px; height: 16px; stroke-width: 1.5; }
+
+    /* Year picker modal */
+    .year-picker-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(44, 44, 44, 0.7);
+      z-index: 300;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+
+    .year-picker-overlay.open { display: flex; }
+
+    .year-picker-modal {
+      background: #FAF8F5;
+      border-radius: 12px;
+      padding: 2rem 1.5rem;
+      max-width: 340px;
+      width: 100%;
+      text-align: center;
+    }
+
+    .year-picker-title {
+      font-family: 'Playfair Display', serif;
+      font-weight: 400;
+      font-size: 1.1rem;
+      letter-spacing: 0.06em;
+      margin-bottom: 0.4rem;
+    }
+
+    .year-picker-subtitle {
+      font-size: 0.75rem;
+      color: #8A8478;
+      letter-spacing: 0.08em;
+      margin-bottom: 1.5rem;
+    }
+
+    .year-picker-options {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.6rem;
+      justify-content: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .year-option {
+      font-family: 'DM Sans', sans-serif;
+      background: none;
+      border: 1px solid #E8E4DF;
+      color: #2C2C2C;
+      font-size: 0.85rem;
+      letter-spacing: 0.05em;
+      padding: 0.6rem 1.3rem;
+      border-radius: 30px;
+      cursor: pointer;
+      min-height: 44px;
+      min-width: 80px;
+      transition: all 0.2s ease;
+    }
+
+    .year-option:hover { border-color: #C5A46D; color: #C5A46D; }
+    .year-option.selected { background: #C5A46D; border-color: #C5A46D; color: #FAF8F5; }
+
+    .year-picker-count {
+      font-size: 0.7rem;
+      color: #8A8478;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 1.2rem;
+    }
+
+    .year-picker-actions {
+      display: flex;
+      gap: 0.8rem;
+      justify-content: center;
+    }
+
+    .year-picker-cancel, .year-picker-create {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.7rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 0.6rem 1.5rem;
+      border-radius: 30px;
+      cursor: pointer;
+      min-height: 44px;
+      transition: all 0.2s ease;
+    }
+
+    .year-picker-cancel {
+      background: none;
+      border: 1px solid #E8E4DF;
+      color: #8A8478;
+    }
+
+    .year-picker-create {
+      background: #C5A46D;
+      border: 1px solid #C5A46D;
+      color: #FAF8F5;
+    }
+
+    .year-picker-create:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* Progress overlay */
+    .progress-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(44, 44, 44, 0.88);
+      z-index: 400;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+
+    .progress-overlay.open { display: flex; }
+
+    .progress-content {
+      text-align: center;
+      max-width: 320px;
+    }
+
+    .progress-title {
+      font-family: 'Playfair Display', serif;
+      font-weight: 400;
+      font-size: 1.2rem;
+      color: #FAF8F5;
+      letter-spacing: 0.06em;
+      margin-bottom: 0.4rem;
+    }
+
+    .progress-subtitle {
+      font-size: 0.7rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: rgba(250, 248, 245, 0.6);
+      margin-bottom: 2rem;
+    }
+
+    .progress-bar-track {
+      width: 100%;
+      height: 3px;
+      background: rgba(250, 248, 245, 0.15);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-bottom: 1rem;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: #C5A46D;
+      border-radius: 2px;
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+
+    .progress-status {
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: rgba(250, 248, 245, 0.5);
+    }
+
+    .progress-cancel {
+      font-family: 'DM Sans', sans-serif;
+      background: none;
+      border: 1px solid rgba(250, 248, 245, 0.3);
+      color: rgba(250, 248, 245, 0.6);
+      font-size: 0.65rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 0.5rem 1.2rem;
+      border-radius: 30px;
+      cursor: pointer;
+      margin-top: 1.5rem;
+      min-height: 44px;
+    }
+
     /* Month group headers */
     .month-header {
       font-family: 'Playfair Display', serif;
@@ -329,6 +539,14 @@
 
     <!-- Gallery (hidden until signed in) -->
     <div id="appContent" style="display:none;">
+      <!-- Year in Review button -->
+      <div class="compilation-section" id="compilationSection" style="display:none;">
+        <button class="compilation-btn" onclick="openYearPicker()">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          Year in Review
+        </button>
+      </div>
+
       <div class="gallery" id="gallery">
         <div class="gallery-empty">No photos yet. Add one from the Tracker page.</div>
       </div>
@@ -348,6 +566,36 @@
       <button class="lightbox-btn lightbox-btn-delete" id="lightboxDeleteBtn" onclick="deletePhoto()">Delete</button>
     </div>
   </div>
+
+  <!-- Year picker modal -->
+  <div class="year-picker-overlay" id="yearPickerOverlay" onclick="closeYearPicker(event)">
+    <div class="year-picker-modal">
+      <div class="year-picker-title">Year in Review</div>
+      <div class="year-picker-subtitle">Choose a year to compile your photos into a video</div>
+      <div class="year-picker-options" id="yearPickerOptions"></div>
+      <div class="year-picker-count" id="yearPickerCount"></div>
+      <div class="year-picker-actions">
+        <button class="year-picker-cancel" onclick="closeYearPicker()">Cancel</button>
+        <button class="year-picker-create" id="yearPickerCreate" onclick="startCompilation()" disabled>Create Video</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Video progress overlay -->
+  <div class="progress-overlay" id="progressOverlay">
+    <div class="progress-content">
+      <div class="progress-title">Creating Your Video</div>
+      <div class="progress-subtitle" id="progressSubtitle">Preparing...</div>
+      <div class="progress-bar-track">
+        <div class="progress-bar-fill" id="progressBarFill"></div>
+      </div>
+      <div class="progress-status" id="progressStatus">0 / 0 photos</div>
+      <button class="progress-cancel" id="progressCancel" onclick="cancelCompilation()">Cancel</button>
+    </div>
+  </div>
+
+  <!-- Hidden canvas for video rendering -->
+  <canvas id="compilationCanvas" width="1080" height="1080" style="display:none;"></canvas>
 
   <!-- Bottom nav -->
   <nav class="bottom-nav">
@@ -448,6 +696,7 @@
       });
 
       gallery.innerHTML = html;
+      updateCompilationButton();
     }
 
     function openLightbox(id) {
@@ -477,6 +726,264 @@
       document.getElementById('lightbox').classList.remove('open');
       currentPhotoId = null;
       renderGallery();
+    }
+
+    // --- Year in Review Video Compilation ---
+
+    let selectedYear = null;
+    let compilationCancelled = false;
+
+    function updateCompilationButton() {
+      var section = document.getElementById('compilationSection');
+      section.style.display = photos.length >= 2 ? 'block' : 'none';
+    }
+
+    function getAvailableYears() {
+      var years = new Set();
+      photos.forEach(function(p) { years.add(p.date.slice(0, 4)); });
+      return Array.from(years).sort().reverse();
+    }
+
+    function getPhotosForYear(year) {
+      return photos
+        .filter(function(p) { return p.date.startsWith(year); })
+        .sort(function(a, b) {
+          if (a.date < b.date) return -1;
+          if (a.date > b.date) return 1;
+          return a.id - b.id;
+        });
+    }
+
+    function openYearPicker() {
+      selectedYear = null;
+      var years = getAvailableYears();
+      var optionsEl = document.getElementById('yearPickerOptions');
+      optionsEl.innerHTML = '';
+      years.forEach(function(y) {
+        var count = getPhotosForYear(y).length;
+        var btn = document.createElement('button');
+        btn.className = 'year-option';
+        btn.textContent = y;
+        btn.onclick = function() { selectYear(y); };
+        optionsEl.appendChild(btn);
+      });
+      document.getElementById('yearPickerCount').textContent = '';
+      document.getElementById('yearPickerCreate').disabled = true;
+      document.getElementById('yearPickerOverlay').classList.add('open');
+    }
+
+    function selectYear(year) {
+      selectedYear = year;
+      var count = getPhotosForYear(year).length;
+      document.querySelectorAll('.year-option').forEach(function(btn) {
+        btn.classList.toggle('selected', btn.textContent === year);
+      });
+      document.getElementById('yearPickerCount').textContent = count + ' photo' + (count !== 1 ? 's' : '') + ' found';
+      document.getElementById('yearPickerCreate').disabled = count < 2;
+    }
+
+    function closeYearPicker(e) {
+      if (e && e.target !== document.getElementById('yearPickerOverlay')) return;
+      document.getElementById('yearPickerOverlay').classList.remove('open');
+    }
+
+    function cancelCompilation() {
+      compilationCancelled = true;
+    }
+
+    function loadImage(src) {
+      return new Promise(function(resolve, reject) {
+        var img = new Image();
+        img.onload = function() { resolve(img); };
+        img.onerror = reject;
+        img.src = src;
+      });
+    }
+
+    function drawFrame(ctx, img, canvas, dateText, captionText, progress) {
+      var w = canvas.width;
+      var h = canvas.height;
+
+      // Background
+      ctx.fillStyle = '#2C2C2C';
+      ctx.fillRect(0, 0, w, h);
+
+      // Draw image centered/cover with padding
+      var pad = 60;
+      var maxW = w - pad * 2;
+      var maxH = h - pad * 2 - 120; // leave room for text at bottom
+      var scale = Math.min(maxW / img.width, maxH / img.height);
+      var dw = img.width * scale;
+      var dh = img.height * scale;
+      var dx = (w - dw) / 2;
+      var dy = pad + (maxH - dh) / 2;
+
+      // Subtle rounded rectangle clip for the image
+      var r = 12;
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(dx + r, dy);
+      ctx.lineTo(dx + dw - r, dy);
+      ctx.quadraticCurveTo(dx + dw, dy, dx + dw, dy + r);
+      ctx.lineTo(dx + dw, dy + dh - r);
+      ctx.quadraticCurveTo(dx + dw, dy + dh, dx + dw - r, dy + dh);
+      ctx.lineTo(dx + r, dy + dh);
+      ctx.quadraticCurveTo(dx, dy + dh, dx, dy + dh - r);
+      ctx.lineTo(dx, dy + r);
+      ctx.quadraticCurveTo(dx, dy, dx + r, dy);
+      ctx.closePath();
+      ctx.clip();
+      ctx.drawImage(img, dx, dy, dw, dh);
+      ctx.restore();
+
+      // Date text
+      var textY = h - 90;
+      ctx.fillStyle = 'rgba(250, 248, 245, 0.5)';
+      ctx.font = '500 22px "DM Sans", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.letterSpacing = '3px';
+      ctx.fillText(dateText.toUpperCase(), w / 2, textY);
+      ctx.letterSpacing = '0px';
+
+      // Caption
+      if (captionText) {
+        ctx.fillStyle = 'rgba(250, 248, 245, 0.85)';
+        ctx.font = '300 28px "DM Sans", sans-serif';
+        ctx.fillText(captionText, w / 2, textY + 38);
+      }
+
+      // Subtle progress line at very bottom
+      ctx.fillStyle = 'rgba(197, 164, 109, 0.3)';
+      ctx.fillRect(0, h - 4, w, 4);
+      ctx.fillStyle = '#C5A46D';
+      ctx.fillRect(0, h - 4, w * progress, 4);
+    }
+
+    async function startCompilation() {
+      if (!selectedYear) return;
+
+      var yearPhotos = getPhotosForYear(selectedYear);
+      if (yearPhotos.length < 2) return;
+
+      // Close picker, show progress
+      document.getElementById('yearPickerOverlay').classList.remove('open');
+      document.getElementById('progressOverlay').classList.add('open');
+      document.getElementById('progressBarFill').style.width = '0%';
+      document.getElementById('progressStatus').textContent = '0 / ' + yearPhotos.length + ' photos';
+      document.getElementById('progressSubtitle').textContent = 'Composing...';
+      compilationCancelled = false;
+
+      var canvas = document.getElementById('compilationCanvas');
+      var ctx = canvas.getContext('2d');
+
+      // Check MediaRecorder support with different mimeTypes
+      var mimeType = '';
+      if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9')) {
+        mimeType = 'video/webm;codecs=vp9';
+      } else if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8')) {
+        mimeType = 'video/webm;codecs=vp8';
+      } else if (MediaRecorder.isTypeSupported('video/webm')) {
+        mimeType = 'video/webm';
+      } else if (MediaRecorder.isTypeSupported('video/mp4')) {
+        mimeType = 'video/mp4';
+      }
+
+      var stream = canvas.captureStream(30);
+      var recorder = new MediaRecorder(stream, {
+        mimeType: mimeType || undefined,
+        videoBitsPerSecond: 4000000
+      });
+      var chunks = [];
+      recorder.ondataavailable = function(e) {
+        if (e.data.size > 0) chunks.push(e.data);
+      };
+
+      recorder.start();
+
+      var DISPLAY_MS = 2500;  // each photo shown for 2.5 seconds
+      var FADE_MS = 400;      // fade transition duration
+      var FPS = 30;
+      var frameInterval = 1000 / FPS;
+
+      try {
+        for (var i = 0; i < yearPhotos.length; i++) {
+          if (compilationCancelled) break;
+
+          var photo = yearPhotos[i];
+          var dateObj = new Date(photo.date + 'T12:00:00');
+          var dateText = dateObj.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+          var caption = photo.caption || '';
+          var progress = (i + 1) / yearPhotos.length;
+
+          // Update progress UI
+          var pct = Math.round(((i) / yearPhotos.length) * 100);
+          document.getElementById('progressBarFill').style.width = pct + '%';
+          document.getElementById('progressStatus').textContent = (i + 1) + ' / ' + yearPhotos.length + ' photos';
+
+          var img = await loadImage(photo.dataUrl);
+
+          // Render frames for this photo's duration
+          var totalFrames = Math.round(DISPLAY_MS / frameInterval);
+          var fadeFrames = Math.round(FADE_MS / frameInterval);
+
+          for (var f = 0; f < totalFrames; f++) {
+            if (compilationCancelled) break;
+
+            // Calculate fade alpha
+            var alpha = 1;
+            if (f < fadeFrames) {
+              alpha = f / fadeFrames; // fade in
+            } else if (f > totalFrames - fadeFrames && i < yearPhotos.length - 1) {
+              alpha = (totalFrames - f) / fadeFrames; // fade out (not on last photo)
+            }
+
+            // Draw background
+            ctx.fillStyle = '#2C2C2C';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw photo frame with alpha
+            ctx.globalAlpha = alpha;
+            drawFrame(ctx, img, canvas, dateText, caption, progress);
+            ctx.globalAlpha = 1;
+
+            // Wait for next frame timing
+            await new Promise(function(r) { setTimeout(r, frameInterval); });
+          }
+        }
+
+        // Hold on last frame briefly
+        if (!compilationCancelled) {
+          await new Promise(function(r) { setTimeout(r, 800); });
+        }
+
+      } catch (err) {
+        console.error('Compilation error:', err);
+      }
+
+      // Finish recording
+      document.getElementById('progressBarFill').style.width = '100%';
+      document.getElementById('progressSubtitle').textContent = compilationCancelled ? 'Cancelled' : 'Finishing...';
+
+      return new Promise(function(resolve) {
+        recorder.onstop = function() {
+          document.getElementById('progressOverlay').classList.remove('open');
+
+          if (!compilationCancelled && chunks.length > 0) {
+            var ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
+            var blob = new Blob(chunks, { type: mimeType || 'video/webm' });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = 'year-in-review-' + selectedYear + '.' + ext;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(function() { URL.revokeObjectURL(url); }, 5000);
+          }
+          resolve();
+        };
+        recorder.stop();
+      });
     }
 
     // Init — app content stays hidden until sign-in
