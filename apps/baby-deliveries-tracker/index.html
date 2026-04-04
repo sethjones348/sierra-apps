@@ -361,12 +361,24 @@
             <div class="stat-label">Girls</div>
           </div>
           <div class="stat-card">
+            <div class="stat-value" id="statPrimip">0</div>
+            <div class="stat-label">Primip</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="statMultip">0</div>
+            <div class="stat-label">Multip</div>
+          </div>
+          <div class="stat-card">
             <div class="stat-value" id="statVaginal">0</div>
             <div class="stat-label">Vaginal</div>
           </div>
           <div class="stat-card">
             <div class="stat-value" id="statCsection">0</div>
             <div class="stat-label">C-Section</div>
+          </div>
+          <div class="stat-card full-width">
+            <div class="stat-value" id="statScheduled">0</div>
+            <div class="stat-label">Scheduled C-Section</div>
           </div>
           <div class="stat-card">
             <div class="stat-value" id="statLabored">0</div>
@@ -413,6 +425,20 @@
         </div>
 
         <div class="form-group">
+          <label>Gravidity</label>
+          <div class="radio-group">
+            <div class="radio-option">
+              <input type="radio" id="parityPrimip" name="parity" value="Primip">
+              <label for="parityPrimip">Primip</label>
+            </div>
+            <div class="radio-option">
+              <input type="radio" id="parityMultip" name="parity" value="Multip">
+              <label for="parityMultip">Multip</label>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
           <label>Weight</label>
           <div style="display:flex; gap:0.8rem; align-items:flex-end;">
             <div style="flex:1;">
@@ -426,7 +452,7 @@
 
         <div class="form-group">
           <label>Route of Delivery</label>
-          <div class="radio-group">
+          <div class="radio-group" style="flex-wrap:wrap;">
             <div class="radio-option">
               <input type="radio" id="routeVaginal" name="route" value="Vaginal">
               <label for="routeVaginal">Vaginal</label>
@@ -434,6 +460,10 @@
             <div class="radio-option">
               <input type="radio" id="routeCsection" name="route" value="C-Section">
               <label for="routeCsection">C-Section</label>
+            </div>
+            <div class="radio-option" style="flex-basis:100%;">
+              <input type="radio" id="routeScheduled" name="route" value="Scheduled C-Section">
+              <label for="routeScheduled">Scheduled C-Section</label>
             </div>
           </div>
         </div>
@@ -510,17 +540,19 @@
 
       const name = document.getElementById('babyName').value.trim();
       const gender = document.querySelector('input[name="gender"]:checked');
+      const parity = document.querySelector('input[name="parity"]:checked');
       const lbs = document.getElementById('weightLbs').value;
       const oz = document.getElementById('weightOz').value;
       const route = document.querySelector('input[name="route"]:checked');
       const labored = document.querySelector('input[name="labored"]:checked');
 
-      if (!name || !gender || !lbs || !route || !labored) return;
+      if (!name || !gender || !parity || !lbs || !route || !labored) return;
 
       const delivery = {
         id: Date.now().toString(),
         name: name,
         gender: gender.value,
+        parity: parity.value,
         weightLbs: parseInt(lbs),
         weightOz: parseFloat(oz) || 0,
         route: route.value,
@@ -549,16 +581,22 @@
       const total = deliveries.length;
       const boys = deliveries.filter(d => d.gender === 'Boy').length;
       const girls = deliveries.filter(d => d.gender === 'Girl').length;
+      const primip = deliveries.filter(d => d.parity === 'Primip').length;
+      const multip = deliveries.filter(d => d.parity === 'Multip').length;
       const vaginal = deliveries.filter(d => d.route === 'Vaginal').length;
       const csection = deliveries.filter(d => d.route === 'C-Section').length;
+      const scheduled = deliveries.filter(d => d.route === 'Scheduled C-Section').length;
       const labored = deliveries.filter(d => d.labored === 'Yes').length;
       const notLabored = deliveries.filter(d => d.labored === 'No').length;
 
       document.getElementById('statTotal').textContent = total;
       document.getElementById('statBoys').textContent = boys;
       document.getElementById('statGirls').textContent = girls;
+      document.getElementById('statPrimip').textContent = primip;
+      document.getElementById('statMultip').textContent = multip;
       document.getElementById('statVaginal').textContent = vaginal;
       document.getElementById('statCsection').textContent = csection;
+      document.getElementById('statScheduled').textContent = scheduled;
       document.getElementById('statLabored').textContent = labored;
       document.getElementById('statNotLabored').textContent = notLabored;
 
@@ -598,7 +636,7 @@
           '<div class="delivery-info">' +
             '<div class="delivery-name">' + escapeHtml(d.name) + '</div>' +
             '<div class="delivery-details">' +
-              d.gender + ' &middot; ' + formatWeight(d.weightLbs, d.weightOz) + ' &middot; ' + d.route +
+              d.gender + (d.parity ? ' &middot; ' + d.parity : '') + ' &middot; ' + formatWeight(d.weightLbs, d.weightOz) + ' &middot; ' + d.route +
               (d.labored ? ' &middot; ' + (d.labored === 'Yes' ? 'Labored' : 'Not labored') : '') +
             '</div>' +
             '<div class="delivery-date">' + dateStr + '</div>' +
