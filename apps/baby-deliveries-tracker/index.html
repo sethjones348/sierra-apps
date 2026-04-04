@@ -369,6 +369,14 @@
             <div class="stat-label">C-Section</div>
           </div>
           <div class="stat-card">
+            <div class="stat-value" id="statLabored">0</div>
+            <div class="stat-label">Labored</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="statNotLabored">0</div>
+            <div class="stat-label">Not Labored</div>
+          </div>
+          <div class="stat-card">
             <div class="stat-value" id="statBiggest">--</div>
             <div class="stat-label">Biggest</div>
             <div class="stat-detail" id="statBiggestName"></div>
@@ -426,6 +434,20 @@
             <div class="radio-option">
               <input type="radio" id="routeCsection" name="route" value="C-Section">
               <label for="routeCsection">C-Section</label>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Did You Labor the Patient?</label>
+          <div class="radio-group">
+            <div class="radio-option">
+              <input type="radio" id="laborYes" name="labored" value="Yes">
+              <label for="laborYes">Yes</label>
+            </div>
+            <div class="radio-option">
+              <input type="radio" id="laborNo" name="labored" value="No">
+              <label for="laborNo">No</label>
             </div>
           </div>
         </div>
@@ -491,8 +513,9 @@
       const lbs = document.getElementById('weightLbs').value;
       const oz = document.getElementById('weightOz').value;
       const route = document.querySelector('input[name="route"]:checked');
+      const labored = document.querySelector('input[name="labored"]:checked');
 
-      if (!name || !gender || !lbs || !route) return;
+      if (!name || !gender || !lbs || !route || !labored) return;
 
       const delivery = {
         id: Date.now().toString(),
@@ -501,6 +524,7 @@
         weightLbs: parseInt(lbs),
         weightOz: parseFloat(oz) || 0,
         route: route.value,
+        labored: labored.value,
         date: new Date().toISOString()
       };
 
@@ -527,12 +551,16 @@
       const girls = deliveries.filter(d => d.gender === 'Girl').length;
       const vaginal = deliveries.filter(d => d.route === 'Vaginal').length;
       const csection = deliveries.filter(d => d.route === 'C-Section').length;
+      const labored = deliveries.filter(d => d.labored === 'Yes').length;
+      const notLabored = deliveries.filter(d => d.labored === 'No').length;
 
       document.getElementById('statTotal').textContent = total;
       document.getElementById('statBoys').textContent = boys;
       document.getElementById('statGirls').textContent = girls;
       document.getElementById('statVaginal').textContent = vaginal;
       document.getElementById('statCsection').textContent = csection;
+      document.getElementById('statLabored').textContent = labored;
+      document.getElementById('statNotLabored').textContent = notLabored;
 
       if (total > 0) {
         let biggest = deliveries[0], smallest = deliveries[0];
@@ -571,6 +599,7 @@
             '<div class="delivery-name">' + escapeHtml(d.name) + '</div>' +
             '<div class="delivery-details">' +
               d.gender + ' &middot; ' + formatWeight(d.weightLbs, d.weightOz) + ' &middot; ' + d.route +
+              (d.labored ? ' &middot; ' + (d.labored === 'Yes' ? 'Labored' : 'Not labored') : '') +
             '</div>' +
             '<div class="delivery-date">' + dateStr + '</div>' +
           '</div>' +
