@@ -286,7 +286,7 @@
       cursor: default;
     }
 
-    /* Log past hours */
+    /* Log entry */
     .log-section {
       padding: 2rem 0;
       border-bottom: 1px solid #E8E4DF;
@@ -297,6 +297,65 @@
       flex-direction: column;
       gap: 1rem;
     }
+
+    .entry-photo-area {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.8rem;
+      padding: 1rem 0 0.5rem;
+    }
+
+    .entry-photo-buttons {
+      display: flex;
+      gap: 0.8rem;
+      justify-content: center;
+    }
+
+    .entry-photo-buttons .btn {
+      font-size: 0.65rem;
+      padding: 0.5rem 1.2rem;
+      min-width: auto;
+    }
+
+    .entry-photo-preview {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.6rem;
+      width: 100%;
+    }
+
+    .entry-photo-preview.has-photo { display: flex; }
+
+    .entry-photo-preview img {
+      width: 100%;
+      max-width: 260px;
+      border-radius: 8px;
+    }
+
+    .entry-photo-caption {
+      width: 100%;
+      max-width: 260px;
+    }
+
+    .entry-photo-remove {
+      background: none;
+      border: none;
+      color: #C4A68A;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.65rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      cursor: pointer;
+      padding: 0.3rem;
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .entry-photo-remove:active { opacity: 0.5; }
 
     .input-group {
       display: flex;
@@ -473,55 +532,7 @@
       margin-top: 0.5rem;
     }
 
-    /* Add photo */
-    .photo-section {
-      padding: 2rem 0;
-      border-bottom: 1px solid #E8E4DF;
-      text-align: center;
-    }
-
     .photo-input { display: none; }
-
-    .photo-buttons {
-      display: flex;
-      gap: 0.8rem;
-      justify-content: center;
-      flex-wrap: wrap;
-    }
-
-    .photo-buttons .btn { min-width: 140px; }
-
-    .photo-preview-row {
-      display: none;
-      flex-direction: column;
-      align-items: center;
-      gap: 1rem;
-      margin-top: 1.2rem;
-    }
-
-    .photo-preview-row.has-photo { display: flex; }
-
-    .photo-preview-img {
-      width: 100%;
-      max-width: 300px;
-      border-radius: 8px;
-    }
-
-    .photo-meta {
-      display: flex;
-      flex-direction: column;
-      gap: 1rem;
-      width: 100%;
-      max-width: 300px;
-    }
-
-    .photo-btn-row {
-      display: flex;
-      gap: 1rem;
-      justify-content: center;
-    }
-
-    .photo-btn-row .btn { min-width: 100px; }
 
     /* History photo button */
     .history-photo-btn {
@@ -717,9 +728,9 @@
       </div>
     </div>
 
-    <!-- Log past hours -->
+    <!-- Log entry (hours + optional photo) -->
     <div class="log-section">
-      <div class="section-title">Log Past Hours</div>
+      <div class="section-title">New Entry</div>
       <div class="log-form">
         <div class="input-group">
           <label>Date</label>
@@ -733,8 +744,24 @@
           <label>Note (optional)</label>
           <input type="text" id="logNote" placeholder="e.g. Park walk">
         </div>
+        <div class="entry-photo-area">
+          <div class="entry-photo-buttons" id="entryPhotoButtons">
+            <button class="btn" onclick="document.getElementById('entryPhotoCameraInput').click()">Take Photo</button>
+            <button class="btn" onclick="document.getElementById('entryPhotoLibraryInput').click()">From Library</button>
+          </div>
+          <input type="file" accept="image/*" capture="environment" id="entryPhotoCameraInput" class="photo-input" onchange="handleEntryPhotoSelect(event)">
+          <input type="file" accept="image/*" id="entryPhotoLibraryInput" class="photo-input" onchange="handleEntryPhotoSelect(event)">
+          <div class="entry-photo-preview" id="entryPhotoPreview">
+            <img id="entryPhotoImg" src="" alt="Preview">
+            <div class="entry-photo-caption input-group">
+              <label>Caption (optional)</label>
+              <input type="text" id="entryPhotoCaption" placeholder="e.g. Sunset at the lake">
+            </div>
+            <button class="entry-photo-remove" onclick="removeEntryPhoto()">Remove Photo</button>
+          </div>
+        </div>
         <div class="log-btn-row">
-          <button class="btn" onclick="logPastHours()">Add Entry</button>
+          <button class="btn btn-primary" onclick="logPastHours()">Add Entry</button>
         </div>
       </div>
     </div>
@@ -802,28 +829,19 @@
       </div>
     </div>
 
-    <!-- Add photo -->
-    <div class="photo-section">
-      <div class="section-title">Capture a Moment</div>
-      <div class="photo-buttons">
-        <button class="btn" onclick="document.getElementById('photoCameraInput').click()">Take Photo</button>
-        <button class="btn" onclick="document.getElementById('photoLibraryInput').click()">From Library</button>
-      </div>
-      <input type="file" accept="image/*" capture="environment" id="photoCameraInput" class="photo-input" onchange="handlePhotoSelect(event)">
-      <input type="file" accept="image/*" id="photoLibraryInput" class="photo-input" onchange="handlePhotoSelect(event)">
-      <input type="file" accept="image/*" id="photoEntryInput" class="photo-input" onchange="handlePhotoSelect(event)">
-      <div class="photo-preview-row" id="photoPreviewRow">
-        <img id="photoPreviewImg" class="photo-preview-img" src="" alt="Preview">
-        <div class="photo-meta">
-          <div class="input-group">
-            <label>Date</label>
-            <input type="date" id="photoDate">
-          </div>
-          <div class="input-group">
+    <!-- Hidden file input for adding photos from history items -->
+    <input type="file" accept="image/*" id="photoEntryInput" class="photo-input" onchange="handlePhotoSelect(event)">
+    <!-- Photo preview overlay for history-item photo additions -->
+    <div class="edit-modal-overlay" id="photoOverlay" onclick="closePhotoOverlay(event)">
+      <div class="edit-modal" onclick="event.stopPropagation()">
+        <h2>Add Photo</h2>
+        <div class="edit-form" style="align-items: center;">
+          <img id="photoPreviewImg" style="width:100%;max-width:260px;border-radius:8px;" src="" alt="Preview">
+          <div class="input-group" style="width:100%;">
             <label>Caption (optional)</label>
             <input type="text" id="photoCaption" placeholder="e.g. Sunset at the lake">
           </div>
-          <div class="photo-btn-row">
+          <div class="edit-btn-row">
             <button class="btn btn-danger" onclick="cancelPhoto()">Cancel</button>
             <button class="btn btn-primary" onclick="savePhoto()">Save</button>
           </div>
@@ -864,6 +882,7 @@
     let photos = [];
     let pendingPhotoData = null;
     let pendingPhotoDate = null;
+    let entryPhotoData = null;
     let stopwatchInterval = null;
     let stopwatchStartTime = null;
     let stopwatchElapsed = 0;
@@ -997,7 +1016,7 @@
       return n.toString().padStart(2, '0');
     }
 
-    // --- Log past hours ---
+    // --- Log entry (hours + optional photo) ---
     function logPastHours() {
       const dateInput = document.getElementById('logDate');
       const hoursInput = document.getElementById('logHours');
@@ -1015,11 +1034,50 @@
         note: noteInput.value.trim() || ''
       });
 
+      // Save attached photo if present
+      if (entryPhotoData) {
+        const caption = document.getElementById('entryPhotoCaption').value.trim();
+        photos.unshift({
+          id: Date.now() + Math.random(),
+          date: date,
+          dataUrl: entryPhotoData,
+          caption: caption
+        });
+        photos.sort((a, b) => {
+          if (a.date !== b.date) return b.date.localeCompare(a.date);
+          return b.id - a.id;
+        });
+        photoStorage.save(photos);
+        removeEntryPhoto();
+      }
+
       saveData();
       renderAll();
 
       hoursInput.value = '';
       noteInput.value = '';
+    }
+
+    // --- Entry photo helpers ---
+    function handleEntryPhotoSelect(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      resizeImage(file, 800, function(dataUrl) {
+        entryPhotoData = dataUrl;
+        document.getElementById('entryPhotoImg').src = dataUrl;
+        document.getElementById('entryPhotoPreview').classList.add('has-photo');
+        document.getElementById('entryPhotoButtons').style.display = 'none';
+        document.getElementById('entryPhotoCaption').value = '';
+      });
+    }
+
+    function removeEntryPhoto() {
+      entryPhotoData = null;
+      document.getElementById('entryPhotoPreview').classList.remove('has-photo');
+      document.getElementById('entryPhotoButtons').style.display = 'flex';
+      document.getElementById('entryPhotoCameraInput').value = '';
+      document.getElementById('entryPhotoLibraryInput').value = '';
+      document.getElementById('entryPhotoCaption').value = '';
     }
 
     // --- Delete ---
@@ -1281,31 +1339,28 @@
       resizeImage(file, 800, function(dataUrl) {
         pendingPhotoData = dataUrl;
         document.getElementById('photoPreviewImg').src = dataUrl;
-        document.getElementById('photoPreviewRow').classList.add('has-photo');
-        document.getElementById('photoDate').value = pendingPhotoDate || new Date().toISOString().slice(0, 10);
         document.getElementById('photoCaption').value = '';
-        pendingPhotoDate = null;
-        // Scroll to the preview
-        document.getElementById('photoPreviewRow').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        document.getElementById('photoOverlay').classList.add('open');
       });
+    }
+
+    function closePhotoOverlay(e) {
+      if (e && e.target !== document.getElementById('photoOverlay')) return;
+      cancelPhoto();
     }
 
     function cancelPhoto() {
       pendingPhotoData = null;
-      pendingPhotoDate = null;
-      document.getElementById('photoPreviewRow').classList.remove('has-photo');
-      document.getElementById('photoCameraInput').value = '';
-      document.getElementById('photoLibraryInput').value = '';
+      document.getElementById('photoOverlay').classList.remove('open');
       document.getElementById('photoEntryInput').value = '';
     }
 
     function savePhoto() {
-      if (!pendingPhotoData) return;
-      const date = document.getElementById('photoDate').value || new Date().toISOString().slice(0, 10);
+      if (!pendingPhotoData || !pendingPhotoDate) return;
       const caption = document.getElementById('photoCaption').value.trim();
       photos.unshift({
         id: Date.now() + Math.random(),
-        date: date,
+        date: pendingPhotoDate,
         dataUrl: pendingPhotoData,
         caption: caption
       });
@@ -1314,6 +1369,7 @@
         return b.id - a.id;
       });
       photoStorage.save(photos);
+      pendingPhotoDate = null;
       cancelPhoto();
       renderHistory();
     }
