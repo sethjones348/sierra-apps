@@ -322,6 +322,106 @@
       border-top: 1px solid #E8E4DF;
       margin: 0.5rem 0;
     }
+
+    .delivery-actions {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.2rem;
+      margin-left: 0.3rem;
+    }
+
+    .btn-edit {
+      background: none;
+      border: none;
+      color: #C5A46D;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.6rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      cursor: pointer;
+      padding: 0.3rem;
+      min-width: 44px;
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.2s ease;
+    }
+
+    .btn-edit:active { opacity: 0.5; }
+
+    .edit-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(44, 44, 44, 0.4);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+
+    .edit-overlay.open { display: flex; }
+
+    .edit-modal {
+      background: #FAF8F5;
+      border-radius: 12px;
+      padding: 2rem 1.5rem;
+      width: 100%;
+      max-width: 420px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .edit-modal h2 {
+      font-family: 'Playfair Display', serif;
+      font-weight: 400;
+      font-size: 1.1rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      text-align: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .edit-modal .form-group { margin-bottom: 1rem; }
+
+    .edit-btn-row {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      margin-top: 1rem;
+    }
+
+    .edit-btn-row button {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.75rem;
+      font-weight: 400;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      min-height: 44px;
+      padding: 0.75rem 2rem;
+      min-width: 110px;
+    }
+
+    .btn-cancel {
+      border: 1px solid #C4A68A;
+      background: transparent;
+      color: #C4A68A;
+    }
+
+    .btn-cancel:active { background: #C4A68A; color: #FAF8F5; }
+
+    .btn-save-edit {
+      border: 1px solid #2C2C2C;
+      background: #2C2C2C;
+      color: #FAF8F5;
+    }
+
+    .btn-save-edit:active { opacity: 0.7; }
   </style>
 </head>
 <body>
@@ -387,6 +487,22 @@
           <div class="stat-card">
             <div class="stat-value" id="statNotLabored">0</div>
             <div class="stat-label">Not Labored</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="statNatural">0</div>
+            <div class="stat-label">Natural</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="statSpinning">0</div>
+            <div class="stat-label">Spinning Babies</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="statEpidural">0</div>
+            <div class="stat-label">Epidural</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="statNoEpidural">0</div>
+            <div class="stat-label">No Epidural</div>
           </div>
           <div class="stat-card">
             <div class="stat-value" id="statBiggest">--</div>
@@ -482,12 +598,181 @@
           </div>
         </div>
 
+        <div class="form-group">
+          <label>Natural</label>
+          <div class="radio-group">
+            <div class="radio-option">
+              <input type="radio" id="naturalYes" name="natural" value="Yes">
+              <label for="naturalYes">Yes</label>
+            </div>
+            <div class="radio-option">
+              <input type="radio" id="naturalNo" name="natural" value="No">
+              <label for="naturalNo">No</label>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Spinning Babies</label>
+          <div class="radio-group">
+            <div class="radio-option">
+              <input type="radio" id="spinningYes" name="spinning" value="Yes">
+              <label for="spinningYes">Yes</label>
+            </div>
+            <div class="radio-option">
+              <input type="radio" id="spinningNo" name="spinning" value="No">
+              <label for="spinningNo">No</label>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Epidural</label>
+          <div class="radio-group">
+            <div class="radio-option">
+              <input type="radio" id="epiduralYes" name="epidural" value="Yes">
+              <label for="epiduralYes">Yes</label>
+            </div>
+            <div class="radio-option">
+              <input type="radio" id="epiduralNo" name="epidural" value="No">
+              <label for="epiduralNo">No</label>
+            </div>
+          </div>
+        </div>
+
         <button type="submit" class="btn-add">Add Delivery</button>
       </form>
 
       <!-- Delivery List -->
       <div class="section-title" id="listTitle" style="display:none;">All Deliveries</div>
       <div class="delivery-list" id="deliveryList"></div>
+
+      <!-- Edit Modal -->
+      <div class="edit-overlay" id="editOverlay" onclick="closeEditModal(event)">
+        <div class="edit-modal" onclick="event.stopPropagation()">
+          <h2>Edit Delivery</h2>
+
+          <div class="form-group">
+            <label>Baby's Name</label>
+            <input type="text" id="editName" autocomplete="off">
+          </div>
+
+          <div class="form-group">
+            <label>Gender</label>
+            <div class="radio-group">
+              <div class="radio-option">
+                <input type="radio" id="editGenderBoy" name="editGender" value="Boy">
+                <label for="editGenderBoy">Boy</label>
+              </div>
+              <div class="radio-option">
+                <input type="radio" id="editGenderGirl" name="editGender" value="Girl">
+                <label for="editGenderGirl">Girl</label>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Gravidity</label>
+            <div class="radio-group">
+              <div class="radio-option">
+                <input type="radio" id="editParityPrimip" name="editParity" value="Primip">
+                <label for="editParityPrimip">Primip</label>
+              </div>
+              <div class="radio-option">
+                <input type="radio" id="editParityMultip" name="editParity" value="Multip">
+                <label for="editParityMultip">Multip</label>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Weight</label>
+            <div style="display:flex; gap:0.8rem; align-items:flex-end;">
+              <div style="flex:1;"><input type="number" id="editWeightLbs" placeholder="lbs" min="0" max="20" inputmode="numeric"></div>
+              <div style="flex:1;"><input type="number" id="editWeightOz" placeholder="oz" min="0" max="15" step="0.1" inputmode="decimal"></div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Route of Delivery</label>
+            <div class="radio-group" style="flex-wrap:wrap;">
+              <div class="radio-option">
+                <input type="radio" id="editRouteVaginal" name="editRoute" value="Vaginal">
+                <label for="editRouteVaginal">Vaginal</label>
+              </div>
+              <div class="radio-option">
+                <input type="radio" id="editRouteCsection" name="editRoute" value="C-Section">
+                <label for="editRouteCsection">C-Section</label>
+              </div>
+              <div class="radio-option" style="flex-basis:100%;">
+                <input type="radio" id="editRouteScheduled" name="editRoute" value="Scheduled C-Section">
+                <label for="editRouteScheduled">Scheduled C-Section</label>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Did You Labor the Patient?</label>
+            <div class="radio-group">
+              <div class="radio-option">
+                <input type="radio" id="editLaborYes" name="editLabored" value="Yes">
+                <label for="editLaborYes">Yes</label>
+              </div>
+              <div class="radio-option">
+                <input type="radio" id="editLaborNo" name="editLabored" value="No">
+                <label for="editLaborNo">No</label>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Natural</label>
+            <div class="radio-group">
+              <div class="radio-option">
+                <input type="radio" id="editNaturalYes" name="editNatural" value="Yes">
+                <label for="editNaturalYes">Yes</label>
+              </div>
+              <div class="radio-option">
+                <input type="radio" id="editNaturalNo" name="editNatural" value="No">
+                <label for="editNaturalNo">No</label>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Spinning Babies</label>
+            <div class="radio-group">
+              <div class="radio-option">
+                <input type="radio" id="editSpinningYes" name="editSpinning" value="Yes">
+                <label for="editSpinningYes">Yes</label>
+              </div>
+              <div class="radio-option">
+                <input type="radio" id="editSpinningNo" name="editSpinning" value="No">
+                <label for="editSpinningNo">No</label>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Epidural</label>
+            <div class="radio-group">
+              <div class="radio-option">
+                <input type="radio" id="editEpiduralYes" name="editEpidural" value="Yes">
+                <label for="editEpiduralYes">Yes</label>
+              </div>
+              <div class="radio-option">
+                <input type="radio" id="editEpiduralNo" name="editEpidural" value="No">
+                <label for="editEpiduralNo">No</label>
+              </div>
+            </div>
+          </div>
+
+          <div class="edit-btn-row">
+            <button class="btn-cancel" onclick="closeEditModal()">Cancel</button>
+            <button class="btn-save-edit" onclick="saveEdit()">Save</button>
+          </div>
+        </div>
+      </div>
 
     </div>
   </div>
@@ -545,8 +830,11 @@
       const oz = document.getElementById('weightOz').value;
       const route = document.querySelector('input[name="route"]:checked');
       const labored = document.querySelector('input[name="labored"]:checked');
+      const natural = document.querySelector('input[name="natural"]:checked');
+      const spinning = document.querySelector('input[name="spinning"]:checked');
+      const epidural = document.querySelector('input[name="epidural"]:checked');
 
-      if (!name || !gender || !parity || !lbs || !route || !labored) return;
+      if (!name || !gender || !parity || !lbs || !route || !labored || !natural || !spinning || !epidural) return;
 
       const delivery = {
         id: Date.now().toString(),
@@ -557,6 +845,9 @@
         weightOz: parseFloat(oz) || 0,
         route: route.value,
         labored: labored.value,
+        natural: natural.value,
+        spinning: spinning.value,
+        epidural: epidural.value,
         date: new Date().toISOString()
       };
 
@@ -588,6 +879,10 @@
       const scheduled = deliveries.filter(d => d.route === 'Scheduled C-Section').length;
       const labored = deliveries.filter(d => d.labored === 'Yes').length;
       const notLabored = deliveries.filter(d => d.labored === 'No').length;
+      const natural = deliveries.filter(d => d.natural === 'Yes').length;
+      const spinning = deliveries.filter(d => d.spinning === 'Yes').length;
+      const epidural = deliveries.filter(d => d.epidural === 'Yes').length;
+      const noEpidural = deliveries.filter(d => d.epidural === 'No').length;
 
       document.getElementById('statTotal').textContent = total;
       document.getElementById('statBoys').textContent = boys;
@@ -599,6 +894,10 @@
       document.getElementById('statScheduled').textContent = scheduled;
       document.getElementById('statLabored').textContent = labored;
       document.getElementById('statNotLabored').textContent = notLabored;
+      document.getElementById('statNatural').textContent = natural;
+      document.getElementById('statSpinning').textContent = spinning;
+      document.getElementById('statEpidural').textContent = epidural;
+      document.getElementById('statNoEpidural').textContent = noEpidural;
 
       if (total > 0) {
         let biggest = deliveries[0], smallest = deliveries[0];
@@ -638,10 +937,16 @@
             '<div class="delivery-details">' +
               d.gender + (d.parity ? ' &middot; ' + d.parity : '') + ' &middot; ' + formatWeight(d.weightLbs, d.weightOz) + ' &middot; ' + d.route +
               (d.labored ? ' &middot; ' + (d.labored === 'Yes' ? 'Labored' : 'Not labored') : '') +
+              (d.natural === 'Yes' ? ' &middot; Natural' : '') +
+              (d.spinning === 'Yes' ? ' &middot; Spinning Babies' : '') +
+              (d.epidural ? ' &middot; ' + (d.epidural === 'Yes' ? 'Epidural' : 'No epidural') : '') +
             '</div>' +
             '<div class="delivery-date">' + dateStr + '</div>' +
           '</div>' +
-          '<button class="btn-delete" onclick="deleteDelivery(\'' + d.id + '\')" aria-label="Delete">&times;</button>' +
+          '<div class="delivery-actions">' +
+            '<button class="btn-edit" onclick="openEditModal(\'' + d.id + '\')">Edit</button>' +
+            '<button class="btn-delete" onclick="deleteDelivery(\'' + d.id + '\')" aria-label="Delete">&times;</button>' +
+          '</div>' +
         '</div>';
       }).join('');
     }
@@ -661,6 +966,75 @@
       const div = document.createElement('div');
       div.textContent = str;
       return div.innerHTML;
+    }
+
+    // --- Edit modal ---
+    let editingId = null;
+
+    function setRadio(name, value) {
+      const el = document.querySelector('input[name="' + name + '"][value="' + value + '"]');
+      if (el) el.checked = true;
+    }
+
+    function getRadio(name) {
+      const el = document.querySelector('input[name="' + name + '"]:checked');
+      return el ? el.value : null;
+    }
+
+    function openEditModal(id) {
+      const d = deliveries.find(x => x.id === id);
+      if (!d) return;
+      editingId = id;
+
+      document.getElementById('editName').value = d.name;
+      document.getElementById('editWeightLbs').value = d.weightLbs;
+      document.getElementById('editWeightOz').value = d.weightOz || '';
+
+      // Clear all edit radios first
+      document.querySelectorAll('.edit-modal input[type="radio"]').forEach(r => r.checked = false);
+
+      setRadio('editGender', d.gender);
+      setRadio('editParity', d.parity);
+      setRadio('editRoute', d.route);
+      setRadio('editLabored', d.labored);
+      setRadio('editNatural', d.natural);
+      setRadio('editSpinning', d.spinning);
+      setRadio('editEpidural', d.epidural);
+
+      document.getElementById('editOverlay').classList.add('open');
+    }
+
+    function closeEditModal(e) {
+      if (e && e.target !== document.getElementById('editOverlay')) return;
+      editingId = null;
+      document.getElementById('editOverlay').classList.remove('open');
+    }
+
+    function saveEdit() {
+      const d = deliveries.find(x => x.id === editingId);
+      if (!d) return;
+
+      const name = document.getElementById('editName').value.trim();
+      const lbs = document.getElementById('editWeightLbs').value;
+      const gender = getRadio('editGender');
+      const route = getRadio('editRoute');
+
+      if (!name || !lbs || !gender || !route) return;
+
+      d.name = name;
+      d.gender = gender;
+      d.parity = getRadio('editParity') || d.parity;
+      d.weightLbs = parseInt(lbs);
+      d.weightOz = parseFloat(document.getElementById('editWeightOz').value) || 0;
+      d.route = route;
+      d.labored = getRadio('editLabored') || d.labored;
+      d.natural = getRadio('editNatural') || d.natural;
+      d.spinning = getRadio('editSpinning') || d.spinning;
+      d.epidural = getRadio('editEpidural') || d.epidural;
+
+      storage.save(deliveries);
+      render();
+      closeEditModal();
     }
   </script>
 </body>
