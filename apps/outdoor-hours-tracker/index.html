@@ -744,7 +744,11 @@
           <label>Note (optional)</label>
           <input type="text" id="logNote" placeholder="e.g. Park walk">
         </div>
+        <div class="log-btn-row">
+          <button class="btn btn-primary" onclick="logPastHours()">Add Entry</button>
+        </div>
         <div class="entry-photo-area">
+          <div class="section-title" style="margin-bottom:0.8rem;">Capture a Moment</div>
           <div class="entry-photo-buttons" id="entryPhotoButtons">
             <button class="btn" onclick="document.getElementById('entryPhotoCameraInput').click()">Take Photo</button>
             <button class="btn" onclick="document.getElementById('entryPhotoLibraryInput').click()">From Library</button>
@@ -759,9 +763,6 @@
             </div>
             <button class="entry-photo-remove" onclick="removeEntryPhoto()">Remove Photo</button>
           </div>
-        </div>
-        <div class="log-btn-row">
-          <button class="btn btn-primary" onclick="logPastHours()">Add Entry</button>
         </div>
       </div>
     </div>
