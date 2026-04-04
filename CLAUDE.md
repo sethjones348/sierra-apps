@@ -150,25 +150,25 @@ Once enabled, everything pushed to `main` is live at `https://sethjones348.githu
 
 ## Persistent Storage (Google Drive)
 
-All apps that need to persist user data should use **Google Sign-In + Google Drive**. Drive is the source of truth, and localStorage is a read/write cache for instant page loads and offline resilience.
+All apps that need to persist user data should use **Google Sign-In + Google Drive**. Drive is the source of truth, and localStorage is a read-only cache for instant page loads.
 
 ### Architecture
 
 - **Google Drive `appDataFolder`** is the source of truth for app data
-- **localStorage** caches app data so the app loads instantly and works when the token is expired
-- **Identity (sign-in state) is decoupled from token validity** — the user stays signed in even when the OAuth access token expires (~1 hour). Token expiry is handled transparently; the user only re-authenticates if a silent refresh fails, and even then they see cached data with a "Tap to sync" prompt instead of being signed out.
+- **localStorage** caches app data for instant page loads (read cache only — writes always go to Drive)
+- **Saves require a valid token.** If the token is expired, `save()` automatically attempts a silent refresh. If refresh fails, a full-screen overlay blocks the app until the user signs back in. No data is silently lost.
 - App content is hidden until the user signs in — show a "Sign in to ..." prompt instead
 - On sign-in, data is loaded from Drive (or from localStorage cache if no token is available)
 - On sign-out, all local state and caches are cleared and app content is hidden
-- Auth state (user identity, token, file IDs, data cache, dirty flags) is shared across all `GoogleDriveStorage` instances on the same page via the `_GDS` global — no need to manually share tokens between instances
+- Auth state (user identity, token, file IDs, data cache) is shared across all `GoogleDriveStorage` instances on the same page via the `_GDS` global — no need to manually share tokens between instances
 
 ### How auth and data flow works
 
 1. **Page load with cached identity + valid token**: User shown as signed in immediately. `loadFromDrive()` loads from Drive, caches locally.
-2. **Page load with cached identity + expired token**: User shown as signed in with cached data. GIS library loads in background and attempts silent token refresh. If refresh succeeds, data reloads from Drive. If refresh fails, "Tap to sync" appears — user stays signed in with cached data.
+2. **Page load with cached identity + expired token**: User shown as signed in with cached data. GIS library loads in background and attempts silent token refresh. If refresh succeeds, data reloads from Drive. If refresh fails, a full-screen reauth overlay appears prompting the user to sign back in.
 3. **Page load with no cached identity**: Sign-in button shown. User signs in interactively, data loads from Drive.
-4. **Save with valid token**: Data saved to localStorage AND Drive.
-5. **Save with expired token**: Data saved to localStorage only, marked as dirty. On next successful token refresh, dirty data is pushed to Drive before any Drive load occurs.
+4. **Save with valid token**: Data saved to Drive, then cached in localStorage.
+5. **Save with expired token**: `save()` auto-refreshes the token silently. If refresh succeeds, saves transparently. If refresh fails, reauth overlay blocks the app — `save()` returns `false`.
 
 ### Auth session persistence
 
@@ -177,13 +177,11 @@ The shared library caches these in `localStorage`:
 1. **User info** (`gds-auth-user`) — name and picture, so the signed-in UI renders instantly on page load. Persists until explicit sign-out.
 2. **Access token + expiry** (`gds-auth-token`) — Google OAuth tokens last ~1 hour. Used directly if still valid; otherwise a silent refresh is attempted.
 3. **Drive file IDs** (`gds-file-<filename>`) — so `loadFromDrive()` skips the file search and reads directly (1 API call instead of 2).
-4. **App data cache** (`gds-data-<filename>`) — a copy of the Drive file contents for instant page loads and offline resilience.
-5. **Dirty flag** (`gds-dirty-<filename>`) — tracks whether local data has been saved but not yet synced to Drive.
+4. **App data cache** (`gds-data-<filename>`) — a copy of the Drive file contents for instant page loads.
 
 **Rules to follow — do NOT violate these:**
 
-- **Never sign the user out when a token refresh fails.** If a silent refresh fails, show "Tap to sync" but keep the user signed in with cached data. Never clear the user identity cache on token failure. Never revoke the token on refresh failure.
-- **Never use merge logic or two-way sync.** When dirty local data exists, it is pushed to Drive on reconnect. When no dirty data exists, Drive data is loaded. No merging.
+- **Never use dirty flags or local-only saves.** Saves must go to Drive or fail visibly. No silent local caching of writes.
 - **Never wait for Google's GIS library to load before restoring a cached session.** Cached identity and data are available immediately. GIS is only needed for token requests.
 - **Never do a file search (`_findDriveFile`) on every page load.** Cache the Drive file ID after the first lookup. Only re-search if the cached ID fails.
 - **Constructor takes only `fileName`.** The library manages its own cache keys internally.
@@ -307,12 +305,12 @@ The Google OAuth Client ID is: `437861067044-r6m2ndd5bqgd0u82f1rjq8a3nv91fc3q.ap
 
 - **Every piece of app data that needs to persist MUST be stored in Google Drive** via a `GoogleDriveStorage` instance. If you're adding a new data model (e.g., photos, settings, categories), create a new `GoogleDriveStorage('my-app-newmodel.json')` instance for it and use `save()` / `loadFromDrive()`. Do not store data only in JavaScript variables or only in localStorage — it must round-trip through Drive.
 - Each app MUST use a **unique file name** for its Drive file (e.g., `outdoor-hours-data.json`, `budget-data.json`)
-- **Do not manually manage localStorage for app data.** The shared library handles all caching (data, auth, file IDs, dirty flags) internally.
+- **Do not manually manage localStorage for app data.** The shared library handles all caching (data, auth, file IDs) internally.
 - **Declare ALL state variables and `GoogleDriveStorage` instances BEFORE calling `renderAuthUI`.** The `onSignIn` callback runs synchronously during `_initAuth`, so any variable it references must already be initialized — otherwise you get a temporal dead zone `ReferenceError`.
 - **Always use cache-first rendering in `onSignIn`.** Check `storage.getCachedData()` first. If cached data exists, render instantly (no spinner), then refresh from Drive in the background. Only show the loading spinner on first visit when no cache exists.
 - App content must be **hidden until the user signs in** — show a friendly sign-in prompt instead
 - On sign-out, **clear all in-memory state**, hide app content AND the loading state, and show the sign-in prompt. The shared library clears all `gds-*` localStorage keys automatically.
-- The sign-in button, sync status, and "Tap to sync" reconnect are handled automatically by the shared library
+- The sign-in button, sync status, and reauth overlay are handled automatically by the shared library
 - The OAuth Client ID is configured for the origin `https://sethjones348.github.io` — no per-app setup needed
 - Multiple pages in the same app (e.g., `index.html` and `album.html`) each create their own `GoogleDriveStorage` instance — this is fine, they share the same auth state via the `_GDS` global and the same cached token via localStorage
 - Multiple `GoogleDriveStorage` instances on the same page (e.g., one for data, one for photos) share auth state automatically — do not manually copy tokens between instances
