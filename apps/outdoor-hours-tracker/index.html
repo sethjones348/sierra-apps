@@ -683,6 +683,166 @@
       color: #8A8478;
       letter-spacing: 0.08em;
     }
+
+    /* Family members */
+    .family-section {
+      padding: 1.5rem 0;
+      border-bottom: 1px solid #E8E4DF;
+    }
+
+    .family-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+
+    .family-members-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .family-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: #F0EDE8;
+      border: none;
+      border-radius: 20px;
+      padding: 0.4rem 0.8rem;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.8rem;
+      font-weight: 400;
+      color: #2C2C2C;
+      letter-spacing: 0.03em;
+    }
+
+    .family-chip-remove {
+      background: none;
+      border: none;
+      color: #C4A68A;
+      font-size: 0.9rem;
+      cursor: pointer;
+      padding: 0 0.1rem;
+      line-height: 1;
+      min-width: 22px;
+      min-height: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .family-chip-remove:active { opacity: 0.5; }
+
+    .family-add-btn {
+      background: none;
+      border: 1px dashed #D5D0CA;
+      border-radius: 20px;
+      padding: 0.4rem 0.8rem;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.8rem;
+      color: #8A8478;
+      cursor: pointer;
+      min-height: 34px;
+      transition: border-color 0.2s ease;
+    }
+
+    .family-add-btn:active { border-color: #8A8478; }
+
+    .family-add-row {
+      display: none;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 0.8rem;
+    }
+
+    .family-add-row.open { display: flex; }
+
+    .family-add-row input {
+      flex: 1;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 300;
+      padding: 0.5rem 0;
+      border: none;
+      border-bottom: 1px solid #D5D0CA;
+      background: transparent;
+      color: #2C2C2C;
+      outline: none;
+      min-height: 44px;
+    }
+
+    .family-add-row input:focus { border-bottom-color: #2C2C2C; }
+
+    .family-add-row .btn {
+      min-width: auto;
+      padding: 0.5rem 1rem;
+      font-size: 0.65rem;
+    }
+
+    /* Member picker (in entry form) */
+    .member-picker {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .member-picker-label {
+      font-size: 0.7rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: #8A8478;
+      font-weight: 400;
+    }
+
+    .member-picker-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+    }
+
+    .member-toggle {
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid #D5D0CA;
+      border-radius: 20px;
+      padding: 0.4rem 0.9rem;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.78rem;
+      font-weight: 400;
+      color: #8A8478;
+      background: transparent;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      min-height: 34px;
+    }
+
+    .member-toggle.selected {
+      background: #2C2C2C;
+      border-color: #2C2C2C;
+      color: #FAF8F5;
+    }
+
+    .member-toggle:active { opacity: 0.6; }
+
+    .history-members {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.25rem;
+      margin-top: 0.2rem;
+    }
+
+    .history-member-tag {
+      font-size: 0.6rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #A3A88E;
+      background: #F0EDE8;
+      border-radius: 10px;
+      padding: 0.15rem 0.5rem;
+      font-weight: 400;
+    }
   </style>
   <style id="gds-styles"></style>
 </head>
@@ -717,6 +877,19 @@
       <div class="week-summary" id="weekSummary">0 hrs this week</div>
     </div>
 
+    <!-- Family Members -->
+    <div class="family-section">
+      <div class="family-header">
+        <div class="section-title" style="margin-bottom:0;">Family Members</div>
+      </div>
+      <div class="family-members-list" id="familyList"></div>
+      <div class="family-add-row" id="familyAddRow">
+        <input type="text" id="familyNameInput" placeholder="Name" maxlength="30">
+        <button class="btn btn-primary" onclick="addFamilyMember()">Add</button>
+        <button class="btn" onclick="closeFamilyAdd()">Cancel</button>
+      </div>
+    </div>
+
     <!-- Stopwatch -->
     <div class="stopwatch-section">
       <div class="section-title">Stopwatch</div>
@@ -744,6 +917,7 @@
           <label>Note (optional)</label>
           <input type="text" id="logNote" placeholder="e.g. Park walk">
         </div>
+        <div class="member-picker" id="entryMemberPicker"></div>
         <div class="log-btn-row">
           <button class="btn btn-primary" onclick="logPastHours()">Add Entry</button>
         </div>
@@ -822,6 +996,7 @@
             <label>Note (optional)</label>
             <input type="text" id="editNote" placeholder="e.g. Park walk">
           </div>
+          <div class="member-picker" id="editMemberPicker"></div>
           <div class="edit-btn-row">
             <button class="btn btn-danger" onclick="closeEditModal()">Cancel</button>
             <button class="btn btn-primary" onclick="saveEditEntry()">Save</button>
@@ -871,6 +1046,10 @@
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
       Tracker
     </a>
+    <a href="/sierra-apps/apps/outdoor-hours-tracker/family.html" class="nav-item">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+      Family
+    </a>
     <a href="/sierra-apps/apps/outdoor-hours-tracker/album.html" class="nav-item">
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
       Album
@@ -881,6 +1060,7 @@
     // --- State ---
     let entries = [];
     let photos = [];
+    let familyMembers = [];
     let pendingPhotoData = null;
     let pendingPhotoDate = null;
     let entryPhotoData = null;
@@ -888,10 +1068,13 @@
     let stopwatchStartTime = null;
     let stopwatchElapsed = 0;
     let stopwatchRunning = false;
+    let entrySelectedMembers = [];
+    let editSelectedMembers = [];
 
     // --- Google Drive Storage (single source of truth) ---
     const storage = new GoogleDriveStorage('outdoor-hours-data.json');
     const photoStorage = new GoogleDriveStorage('outdoor-hours-photos.json');
+    const familyStorage = new GoogleDriveStorage('outdoor-hours-family.json');
 
     // Inject shared auth styles
     document.getElementById('gds-styles').textContent = GoogleDriveStorage.getStyles();
@@ -902,30 +1085,32 @@
         // Try cached data first for instant render
         var cachedEntries = storage.getCachedData();
         var cachedPhotos = photoStorage.getCachedData();
+        var cachedFamily = familyStorage.getCachedData();
 
         if (cachedEntries !== null) {
-          // Cached data exists — show instantly, no spinner
           entries = cachedEntries;
           photos = cachedPhotos || [];
+          familyMembers = cachedFamily || [];
           document.getElementById('signinPrompt').style.display = 'none';
           document.getElementById('loadingState').style.display = 'none';
           document.getElementById('appContent').style.display = 'block';
           renderAll();
 
-          // Still load from Drive in background to get fresh data
           var freshEntries = await storage.loadFromDrive();
           var freshPhotos = await photoStorage.loadFromDrive();
+          var freshFamily = await familyStorage.loadFromDrive();
           if (freshEntries !== null) { entries = freshEntries; }
           if (freshPhotos !== null) { photos = freshPhotos; }
+          if (freshFamily !== null) { familyMembers = freshFamily; }
           renderAll();
         } else {
-          // No cache — show loading spinner
           document.getElementById('signinPrompt').style.display = 'none';
           document.getElementById('appContent').style.display = 'none';
           document.getElementById('loadingState').style.display = 'block';
 
           entries = await storage.loadFromDrive() || [];
           photos = await photoStorage.loadFromDrive() || [];
+          familyMembers = await familyStorage.loadFromDrive() || [];
 
           document.getElementById('loadingState').style.display = 'none';
           document.getElementById('appContent').style.display = 'block';
@@ -933,9 +1118,9 @@
         }
       },
       onSignOut: () => {
-        // Clear local state and hide app content
         entries = [];
         photos = [];
+        familyMembers = [];
         document.getElementById('loadingState').style.display = 'none';
         document.getElementById('appContent').style.display = 'none';
         document.getElementById('signinPrompt').style.display = 'block';
@@ -995,7 +1180,8 @@
         id: Date.now(),
         date: today,
         hours: Math.round(hours * 100) / 100,
-        note: 'Stopwatch'
+        note: 'Stopwatch',
+        members: entrySelectedMembers.slice()
       });
 
       saveData();
@@ -1032,7 +1218,8 @@
         id: Date.now(),
         date: date,
         hours: Math.round(hours * 100) / 100,
-        note: noteInput.value.trim() || ''
+        note: noteInput.value.trim() || '',
+        members: entrySelectedMembers.slice()
       });
 
       // Save attached photo if present
@@ -1057,6 +1244,8 @@
 
       hoursInput.value = '';
       noteInput.value = '';
+      entrySelectedMembers = [];
+      renderMemberPicker('entryMemberPicker', entrySelectedMembers, 'entry');
     }
 
     // --- Entry photo helpers ---
@@ -1098,6 +1287,8 @@
       document.getElementById('editDate').value = entry.date;
       document.getElementById('editHours').value = entry.hours;
       document.getElementById('editNote').value = entry.note || '';
+      editSelectedMembers = (entry.members || []).slice();
+      renderMemberPicker('editMemberPicker', editSelectedMembers, 'edit');
       document.getElementById('editOverlay').classList.add('open');
     }
 
@@ -1120,6 +1311,7 @@
       entry.date = date;
       entry.hours = Math.round(hours * 100) / 100;
       entry.note = note;
+      entry.members = editSelectedMembers.slice();
 
       // Re-sort by date descending
       entries.sort((a, b) => {
@@ -1133,8 +1325,76 @@
       document.getElementById('editOverlay').classList.remove('open');
     }
 
+    // --- Family members ---
+    function renderFamilyList() {
+      const list = document.getElementById('familyList');
+      var html = familyMembers.map(function(name) {
+        return '<span class="family-chip">' + escapeHtml(name) +
+          '<button class="family-chip-remove" onclick="removeFamilyMember(\'' + escapeHtml(name).replace(/'/g, "\\'") + '\')">&times;</button></span>';
+      }).join('');
+      html += '<button class="family-add-btn" onclick="openFamilyAdd()">+ Add</button>';
+      list.innerHTML = html;
+    }
+
+    function openFamilyAdd() {
+      document.getElementById('familyAddRow').classList.add('open');
+      document.getElementById('familyNameInput').value = '';
+      document.getElementById('familyNameInput').focus();
+    }
+
+    function closeFamilyAdd() {
+      document.getElementById('familyAddRow').classList.remove('open');
+    }
+
+    function addFamilyMember() {
+      var name = document.getElementById('familyNameInput').value.trim();
+      if (!name) return;
+      if (familyMembers.some(function(m) { return m.toLowerCase() === name.toLowerCase(); })) return;
+      familyMembers.push(name);
+      familyStorage.save(familyMembers);
+      closeFamilyAdd();
+      renderAll();
+    }
+
+    function removeFamilyMember(name) {
+      familyMembers = familyMembers.filter(function(m) { return m !== name; });
+      familyStorage.save(familyMembers);
+      renderAll();
+    }
+
+    // Enter key in family name input
+    document.getElementById('familyNameInput').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') { e.preventDefault(); addFamilyMember(); }
+    });
+
+    // --- Member picker ---
+    function renderMemberPicker(containerId, selectedArr, prefix) {
+      var container = document.getElementById(containerId);
+      if (familyMembers.length === 0) {
+        container.innerHTML = '';
+        return;
+      }
+      var html = '<div class="member-picker-label">Who was outside?</div><div class="member-picker-chips">';
+      familyMembers.forEach(function(name) {
+        var sel = selectedArr.indexOf(name) !== -1;
+        html += '<button class="member-toggle' + (sel ? ' selected' : '') + '" onclick="toggleMember(\'' + escapeHtml(name).replace(/'/g, "\\'") + '\', \'' + prefix + '\')">' + escapeHtml(name) + '</button>';
+      });
+      html += '</div>';
+      container.innerHTML = html;
+    }
+
+    function toggleMember(name, prefix) {
+      var arr = prefix === 'entry' ? entrySelectedMembers : editSelectedMembers;
+      var idx = arr.indexOf(name);
+      if (idx === -1) arr.push(name);
+      else arr.splice(idx, 1);
+      renderMemberPicker(prefix === 'entry' ? 'entryMemberPicker' : 'editMemberPicker', arr, prefix);
+    }
+
     // --- Rendering ---
     function renderAll() {
+      renderFamilyList();
+      renderMemberPicker('entryMemberPicker', entrySelectedMembers, 'entry');
       renderTotal();
       renderWeekSummary();
       renderHistory();
@@ -1189,6 +1449,12 @@
           ? '<div class="history-note">' + escapeHtml(e.note) + '</div>'
           : '';
 
+        const membersHtml = (e.members && e.members.length > 0)
+          ? '<div class="history-members">' +
+              e.members.map(function(m) { return '<span class="history-member-tag">' + escapeHtml(m) + '</span>'; }).join('') +
+            '</div>'
+          : '';
+
         const datePhotos = getPhotosForDate(e.date);
         const thumbsHtml = datePhotos.length > 0
           ? '<div class="history-photos">' +
@@ -1200,6 +1466,7 @@
           '<div class="history-item-left" onclick="editEntry(' + e.id + ')">' +
             '<div class="history-date">' + formatted + '</div>' +
             noteHtml +
+            membersHtml +
             thumbsHtml +
           '</div>' +
           '<div class="history-item-right">' +

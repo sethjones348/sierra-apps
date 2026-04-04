@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="apple-mobile-web-app-title" content="Time Well Spent">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <title>Outdoor Hours — Family</title>
+  <link rel="icon" href="/sierra-apps/apps/outdoor-hours-tracker/icon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="/sierra-apps/shared/config.js"></script>
+  <script src="/sierra-apps/shared/google-drive-storage.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 300;
+      background: #FAF8F5;
+      color: #2C2C2C;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+      padding-bottom: 70px;
+    }
+
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #FAF8F5;
+      border-top: 1px solid #E8E4DF;
+      display: flex;
+      justify-content: center;
+      gap: 0;
+      z-index: 50;
+      padding: 0;
+    }
+
+    .nav-item {
+      flex: 1;
+      max-width: 160px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.6rem 0 0.5rem;
+      text-decoration: none;
+      color: #8A8478;
+      font-size: 0.6rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      font-weight: 400;
+      transition: color 0.2s ease;
+      min-height: 44px;
+      justify-content: center;
+    }
+
+    .nav-item.active { color: #2C2C2C; }
+
+    .nav-item svg {
+      width: 20px;
+      height: 20px;
+      stroke-width: 1.5;
+    }
+
+    header {
+      padding: 2.5rem 1.5rem 1.5rem;
+      text-align: center;
+      border-bottom: 1px solid #E8E4DF;
+    }
+
+    header h1 {
+      font-family: 'Playfair Display', serif;
+      font-weight: 400;
+      font-size: 1.6rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    header p {
+      color: #8A8478;
+      font-size: 0.8rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      font-weight: 400;
+      margin-top: 0.3rem;
+    }
+
+    .container {
+      max-width: 500px;
+      margin: 0 auto;
+      padding: 0 1.5rem 2rem;
+    }
+
+    .auth-section {
+      text-align: center;
+      padding: 1.2rem 0;
+      border-bottom: 1px solid #E8E4DF;
+    }
+
+    .section-title {
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: #8A8478;
+      font-weight: 400;
+      margin-bottom: 1.5rem;
+    }
+
+    .loading-state {
+      display: none;
+      text-align: center;
+      padding: 5rem 1.5rem;
+    }
+
+    .loading-spinner {
+      width: 24px;
+      height: 24px;
+      border: 2px solid #E8E4DF;
+      border-top-color: #C5A46D;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 0.8rem;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loading-text {
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: #8A8478;
+      font-weight: 400;
+    }
+
+    .signin-prompt {
+      text-align: center;
+      padding: 4rem 1.5rem;
+    }
+
+    .signin-prompt-text {
+      font-size: 0.85rem;
+      color: #8A8478;
+      letter-spacing: 0.08em;
+    }
+
+    /* Family total */
+    .family-total-section {
+      text-align: center;
+      padding: 2.5rem 0 2rem;
+      border-bottom: 1px solid #E8E4DF;
+    }
+
+    .family-total-label {
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: #8A8478;
+      font-weight: 400;
+      margin-bottom: 0.5rem;
+    }
+
+    .family-total-hours {
+      font-family: 'Playfair Display', serif;
+      font-size: 3rem;
+      font-weight: 400;
+      letter-spacing: 0.02em;
+      color: #2C2C2C;
+    }
+
+    .family-total-hours span {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 300;
+      color: #8A8478;
+      letter-spacing: 0.05em;
+    }
+
+    /* Member cards */
+    .member-cards {
+      padding: 1.5rem 0;
+    }
+
+    .member-card {
+      border-bottom: 1px solid #E8E4DF;
+      padding: 1.5rem 0;
+    }
+
+    .member-card:last-child { border-bottom: none; }
+
+    .member-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 0.8rem;
+    }
+
+    .member-name {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.15rem;
+      font-weight: 400;
+      letter-spacing: 0.05em;
+    }
+
+    .member-total {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 400;
+      color: #2C2C2C;
+    }
+
+    .member-total span {
+      font-size: 0.75rem;
+      font-weight: 300;
+      color: #8A8478;
+    }
+
+    .member-week {
+      font-size: 0.78rem;
+      color: #A3A88E;
+      letter-spacing: 0.03em;
+      margin-bottom: 0.6rem;
+    }
+
+    .member-recent {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    .member-recent-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.8rem;
+      color: #8A8478;
+    }
+
+    .member-recent-date {
+      font-weight: 400;
+      color: #2C2C2C;
+    }
+
+    .member-recent-hours {
+      font-weight: 400;
+      color: #2C2C2C;
+    }
+
+    .member-recent-note {
+      font-size: 0.7rem;
+      color: #8A8478;
+      margin-left: 0.5rem;
+      flex: 1;
+      text-align: left;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 3rem 1.5rem;
+      color: #8A8478;
+      font-size: 0.85rem;
+    }
+
+    .empty-state p {
+      margin-bottom: 0.5rem;
+    }
+
+    .empty-state-sub {
+      font-size: 0.75rem;
+      color: #A3A88E;
+      letter-spacing: 0.05em;
+    }
+  </style>
+  <style id="gds-styles"></style>
+</head>
+<body>
+  <header>
+    <h1>Family</h1>
+    <p>Individual trackers</p>
+  </header>
+
+  <div class="container">
+    <div class="auth-section" id="authSection"></div>
+
+    <div class="signin-prompt" id="signinPrompt">
+      <p class="signin-prompt-text">Sign in to see family hours</p>
+    </div>
+
+    <div class="loading-state" id="loadingState">
+      <div class="loading-spinner"></div>
+      <div class="loading-text">Gathering...</div>
+    </div>
+
+    <div id="appContent" style="display:none;">
+
+      <div class="family-total-section">
+        <div class="family-total-label">Family Total</div>
+        <div class="family-total-hours" id="familyTotalDisplay">0<span> hrs</span></div>
+      </div>
+
+      <div class="member-cards" id="memberCards">
+        <div class="empty-state">
+          <p>No family members yet</p>
+          <div class="empty-state-sub">Add members on the Tracker tab</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <nav class="bottom-nav">
+    <a href="/sierra-apps/" class="nav-item">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0h4"/></svg>
+      Home
+    </a>
+    <a href="/sierra-apps/apps/outdoor-hours-tracker/" class="nav-item">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      Tracker
+    </a>
+    <a href="/sierra-apps/apps/outdoor-hours-tracker/family.html" class="nav-item active">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+      Family
+    </a>
+    <a href="/sierra-apps/apps/outdoor-hours-tracker/album.html" class="nav-item">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+      Album
+    </a>
+  </nav>
+
+  <script>
+    let entries = [];
+    let familyMembers = [];
+
+    const storage = new GoogleDriveStorage('outdoor-hours-data.json');
+    const familyStorage = new GoogleDriveStorage('outdoor-hours-family.json');
+
+    document.getElementById('gds-styles').textContent = GoogleDriveStorage.getStyles();
+
+    storage.renderAuthUI(document.getElementById('authSection'), {
+      onSignIn: async () => {
+        var cachedEntries = storage.getCachedData();
+        var cachedFamily = familyStorage.getCachedData();
+
+        if (cachedEntries !== null) {
+          entries = cachedEntries;
+          familyMembers = cachedFamily || [];
+          document.getElementById('signinPrompt').style.display = 'none';
+          document.getElementById('loadingState').style.display = 'none';
+          document.getElementById('appContent').style.display = 'block';
+          renderAll();
+
+          var freshEntries = await storage.loadFromDrive();
+          var freshFamily = await familyStorage.loadFromDrive();
+          if (freshEntries !== null) { entries = freshEntries; }
+          if (freshFamily !== null) { familyMembers = freshFamily; }
+          renderAll();
+        } else {
+          document.getElementById('signinPrompt').style.display = 'none';
+          document.getElementById('appContent').style.display = 'none';
+          document.getElementById('loadingState').style.display = 'block';
+
+          entries = await storage.loadFromDrive() || [];
+          familyMembers = await familyStorage.loadFromDrive() || [];
+
+          document.getElementById('loadingState').style.display = 'none';
+          document.getElementById('appContent').style.display = 'block';
+          renderAll();
+        }
+      },
+      onSignOut: () => {
+        entries = [];
+        familyMembers = [];
+        document.getElementById('loadingState').style.display = 'none';
+        document.getElementById('appContent').style.display = 'none';
+        document.getElementById('signinPrompt').style.display = 'block';
+      }
+    });
+
+    function escapeHtml(str) {
+      var div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    function getWeekStart() {
+      var now = new Date();
+      var day = now.getDay();
+      var start = new Date(now);
+      start.setDate(now.getDate() - day);
+      start.setHours(0, 0, 0, 0);
+      return start.toISOString().slice(0, 10);
+    }
+
+    function formatHours(h) {
+      return h < 10 ? h.toFixed(1) : Math.round(h).toString();
+    }
+
+    function getMemberEntries(name) {
+      return entries.filter(function(e) {
+        return e.members && e.members.indexOf(name) !== -1;
+      });
+    }
+
+    function renderAll() {
+      // Family total = sum of ALL entries (any member counts)
+      var total = entries.reduce(function(sum, e) { return sum + e.hours; }, 0);
+      document.getElementById('familyTotalDisplay').innerHTML =
+        formatHours(total) + '<span> hrs</span>';
+
+      var container = document.getElementById('memberCards');
+
+      if (familyMembers.length === 0) {
+        container.innerHTML = '<div class="empty-state"><p>No family members yet</p><div class="empty-state-sub">Add members on the Tracker tab</div></div>';
+        return;
+      }
+
+      var weekStart = getWeekStart();
+
+      container.innerHTML = familyMembers.map(function(name) {
+        var memberEntries = getMemberEntries(name);
+        var memberTotal = memberEntries.reduce(function(sum, e) { return sum + e.hours; }, 0);
+        var weekTotal = memberEntries
+          .filter(function(e) { return e.date >= weekStart; })
+          .reduce(function(sum, e) { return sum + e.hours; }, 0);
+
+        // Recent 5 entries
+        var sorted = memberEntries.slice().sort(function(a, b) {
+          if (a.date !== b.date) return b.date.localeCompare(a.date);
+          return b.id - a.id;
+        });
+        var recent = sorted.slice(0, 5);
+
+        var recentHtml = recent.length > 0
+          ? '<div class="member-recent">' + recent.map(function(e) {
+              var dateObj = new Date(e.date + 'T12:00:00');
+              var formatted = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+              var hoursStr = e.hours < 1
+                ? Math.round(e.hours * 60) + ' min'
+                : e.hours.toFixed(1) + ' hrs';
+              var noteStr = e.note ? '<span class="member-recent-note">' + escapeHtml(e.note) + '</span>' : '';
+              return '<div class="member-recent-item"><span class="member-recent-date">' + formatted + '</span>' + noteStr + '<span class="member-recent-hours">' + hoursStr + '</span></div>';
+            }).join('') + '</div>'
+          : '<div style="font-size:0.78rem;color:#A3A88E;">No entries yet</div>';
+
+        return '<div class="member-card">' +
+          '<div class="member-card-header">' +
+            '<div class="member-name">' + escapeHtml(name) + '</div>' +
+            '<div class="member-total">' + formatHours(memberTotal) + ' <span>hrs</span></div>' +
+          '</div>' +
+          '<div class="member-week">' + formatHours(weekTotal) + ' hrs this week</div>' +
+          recentHtml +
+        '</div>';
+      }).join('');
+    }
+  </script>
+</body>
+</html>
