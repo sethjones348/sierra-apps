@@ -227,6 +227,49 @@
       letter-spacing: 0.08em;
       color: #2C2C2C;
       margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+    }
+
+    .stopwatch-display .sw-sep {
+      pointer-events: none;
+      user-select: none;
+    }
+
+    .stopwatch-display .sw-num {
+      cursor: pointer;
+      padding: 0.1em 0.15em;
+      border-radius: 6px;
+      transition: background 0.2s ease;
+      min-width: 1.8em;
+      text-align: center;
+      display: inline-block;
+    }
+
+    .stopwatch-display .sw-num:hover {
+      background: #F0EDE8;
+    }
+
+    .stopwatch-display .sw-num.editing {
+      background: #F0EDE8;
+    }
+
+    .stopwatch-display input.sw-input {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 2.8rem;
+      font-weight: 300;
+      letter-spacing: 0.08em;
+      color: #2C2C2C;
+      background: #F0EDE8;
+      border: none;
+      border-bottom: 2px solid #C5A46D;
+      border-radius: 6px 6px 0 0;
+      width: 2.2em;
+      text-align: center;
+      padding: 0.1em 0;
+      outline: none;
     }
 
     .stopwatch-buttons {
@@ -893,7 +936,9 @@
     <!-- Stopwatch -->
     <div class="stopwatch-section">
       <div class="section-title">Stopwatch</div>
-      <div class="stopwatch-display" id="stopwatchDisplay">00:00:00</div>
+      <div class="stopwatch-display" id="stopwatchDisplay">
+        <span class="sw-num" id="swHours" onclick="editStopwatchSegment('h')">00</span><span class="sw-sep">:</span><span class="sw-num" id="swMinutes" onclick="editStopwatchSegment('m')">00</span><span class="sw-sep">:</span><span class="sw-num" id="swSeconds" onclick="editStopwatchSegment('s')">00</span>
+      </div>
       <div class="stopwatch-buttons">
         <button class="btn btn-primary" id="startStopBtn" onclick="toggleStopwatch()">Start</button>
         <button class="btn btn-save" id="saveBtn" onclick="saveStopwatch()" disabled>Save</button>
@@ -1160,7 +1205,9 @@
       stopwatchElapsed = 0;
       stopwatchStartTime = null;
       clearInterval(stopwatchInterval);
-      document.getElementById('stopwatchDisplay').textContent = '00:00:00';
+      document.getElementById('swHours').textContent = '00';
+      document.getElementById('swMinutes').textContent = '00';
+      document.getElementById('swSeconds').textContent = '00';
       document.getElementById('startStopBtn').textContent = 'Start';
       document.getElementById('saveBtn').disabled = true;
       document.getElementById('resetBtn').disabled = true;
@@ -1195,8 +1242,56 @@
       const h = Math.floor(totalSec / 3600);
       const m = Math.floor((totalSec % 3600) / 60);
       const s = totalSec % 60;
-      document.getElementById('stopwatchDisplay').textContent =
-        pad(h) + ':' + pad(m) + ':' + pad(s);
+      document.getElementById('swHours').textContent = pad(h);
+      document.getElementById('swMinutes').textContent = pad(m);
+      document.getElementById('swSeconds').textContent = pad(s);
+    }
+
+    function editStopwatchSegment(segment) {
+      if (stopwatchRunning) return;
+
+      var elId = segment === 'h' ? 'swHours' : segment === 'm' ? 'swMinutes' : 'swSeconds';
+      var el = document.getElementById(elId);
+      var currentVal = el.textContent;
+
+      var input = document.createElement('input');
+      input.type = 'number';
+      input.className = 'sw-input';
+      input.value = parseInt(currentVal, 10);
+      input.min = 0;
+      input.max = segment === 'h' ? 99 : 59;
+      input.setAttribute('inputmode', 'numeric');
+
+      el.textContent = '';
+      el.appendChild(input);
+      input.focus();
+      input.select();
+
+      function commit() {
+        var val = parseInt(input.value, 10);
+        if (isNaN(val) || val < 0) val = 0;
+        if (segment !== 'h' && val > 59) val = 59;
+        if (segment === 'h' && val > 99) val = 99;
+
+        el.textContent = pad(val);
+
+        var h = parseInt(document.getElementById('swHours').textContent, 10) || 0;
+        var m = parseInt(document.getElementById('swMinutes').textContent, 10) || 0;
+        var s = parseInt(document.getElementById('swSeconds').textContent, 10) || 0;
+        stopwatchElapsed = ((h * 3600) + (m * 60) + s) * 1000;
+
+        if (stopwatchElapsed > 0) {
+          document.getElementById('startStopBtn').textContent = 'Resume';
+          document.getElementById('saveBtn').disabled = false;
+          document.getElementById('resetBtn').disabled = false;
+        }
+      }
+
+      input.addEventListener('blur', commit);
+      input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') { input.blur(); }
+        if (e.key === 'Escape') { input.value = parseInt(currentVal, 10); input.blur(); }
+      });
     }
 
     function pad(n) {
