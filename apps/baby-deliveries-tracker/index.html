@@ -422,6 +422,49 @@
     }
 
     .btn-save-edit:active { opacity: 0.7; }
+
+    /* Baby sections for multiple births */
+    .baby-section {
+      border-left: 2px solid #E8E4DF;
+      padding-left: 1rem;
+      margin-bottom: 1.2rem;
+      margin-top: 0.5rem;
+    }
+
+    .baby-section-label {
+      font-size: 0.65rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: #C5A46D;
+      font-weight: 500;
+      margin-bottom: 0.8rem;
+      display: none;
+    }
+
+    .baby-section.show-label .baby-section-label { display: block; }
+
+    .birth-type-badge {
+      display: inline-block;
+      font-size: 0.6rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #C5A46D;
+      border: 1px solid #C5A46D;
+      border-radius: 3px;
+      padding: 0.1rem 0.4rem;
+      margin-left: 0.5rem;
+      vertical-align: middle;
+      font-weight: 400;
+    }
+
+    .baby-entry {
+      margin-bottom: 0.2rem;
+    }
+
+    .baby-entry-name {
+      font-weight: 400;
+      color: #2C2C2C;
+    }
   </style>
 </head>
 <body>
@@ -448,9 +491,13 @@
       <!-- Stats Dashboard -->
       <div id="statsSection">
         <div class="stats-grid" id="statsGrid">
-          <div class="stat-card full-width">
+          <div class="stat-card">
             <div class="stat-value" id="statTotal">0</div>
             <div class="stat-label">Total Deliveries</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="statTotalBabies">0</div>
+            <div class="stat-label">Total Babies</div>
           </div>
           <div class="stat-card">
             <div class="stat-value" id="statBoys">0</div>
@@ -459,6 +506,14 @@
           <div class="stat-card">
             <div class="stat-value" id="statGirls">0</div>
             <div class="stat-label">Girls</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="statTwins">0</div>
+            <div class="stat-label">Twins</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="statTriplets">0</div>
+            <div class="stat-label">Triplets</div>
           </div>
           <div class="stat-card">
             <div class="stat-value" id="statPrimip">0</div>
@@ -522,20 +577,103 @@
 
       <form id="deliveryForm">
         <div class="form-group">
-          <label for="babyName">Baby's Name</label>
-          <input type="text" id="babyName" placeholder="First name" autocomplete="off">
-        </div>
-
-        <div class="form-group">
-          <label>Gender</label>
+          <label>Birth Type</label>
           <div class="radio-group">
             <div class="radio-option">
-              <input type="radio" id="genderBoy" name="gender" value="Boy">
-              <label for="genderBoy">Boy</label>
+              <input type="radio" id="birthSingleton" name="birthType" value="Singleton" checked>
+              <label for="birthSingleton">Singleton</label>
             </div>
             <div class="radio-option">
-              <input type="radio" id="genderGirl" name="gender" value="Girl">
-              <label for="genderGirl">Girl</label>
+              <input type="radio" id="birthTwin" name="birthType" value="Twin">
+              <label for="birthTwin">Twin</label>
+            </div>
+            <div class="radio-option">
+              <input type="radio" id="birthTriplet" name="birthType" value="Triplet">
+              <label for="birthTriplet">Triplet</label>
+            </div>
+          </div>
+        </div>
+
+        <div class="baby-section" id="babySection1">
+          <div class="baby-section-label">Baby 1</div>
+          <div class="form-group">
+            <label for="babyName1">Baby's Name</label>
+            <input type="text" id="babyName1" placeholder="First name" autocomplete="off">
+          </div>
+          <div class="form-group">
+            <label>Gender</label>
+            <div class="radio-group">
+              <div class="radio-option">
+                <input type="radio" id="gender1Boy" name="gender1" value="Boy">
+                <label for="gender1Boy">Boy</label>
+              </div>
+              <div class="radio-option">
+                <input type="radio" id="gender1Girl" name="gender1" value="Girl">
+                <label for="gender1Girl">Girl</label>
+              </div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Weight</label>
+            <div style="display:flex; gap:0.8rem; align-items:flex-end;">
+              <div style="flex:1;"><input type="number" id="weight1Lbs" placeholder="lbs" min="0" max="20" inputmode="numeric"></div>
+              <div style="flex:1;"><input type="number" id="weight1Oz" placeholder="oz" min="0" max="15" step="0.1" inputmode="decimal"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="baby-section show-label" id="babySection2" style="display:none;">
+          <div class="baby-section-label">Baby 2</div>
+          <div class="form-group">
+            <label for="babyName2">Baby's Name</label>
+            <input type="text" id="babyName2" placeholder="First name" autocomplete="off">
+          </div>
+          <div class="form-group">
+            <label>Gender</label>
+            <div class="radio-group">
+              <div class="radio-option">
+                <input type="radio" id="gender2Boy" name="gender2" value="Boy">
+                <label for="gender2Boy">Boy</label>
+              </div>
+              <div class="radio-option">
+                <input type="radio" id="gender2Girl" name="gender2" value="Girl">
+                <label for="gender2Girl">Girl</label>
+              </div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Weight</label>
+            <div style="display:flex; gap:0.8rem; align-items:flex-end;">
+              <div style="flex:1;"><input type="number" id="weight2Lbs" placeholder="lbs" min="0" max="20" inputmode="numeric"></div>
+              <div style="flex:1;"><input type="number" id="weight2Oz" placeholder="oz" min="0" max="15" step="0.1" inputmode="decimal"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="baby-section show-label" id="babySection3" style="display:none;">
+          <div class="baby-section-label">Baby 3</div>
+          <div class="form-group">
+            <label for="babyName3">Baby's Name</label>
+            <input type="text" id="babyName3" placeholder="First name" autocomplete="off">
+          </div>
+          <div class="form-group">
+            <label>Gender</label>
+            <div class="radio-group">
+              <div class="radio-option">
+                <input type="radio" id="gender3Boy" name="gender3" value="Boy">
+                <label for="gender3Boy">Boy</label>
+              </div>
+              <div class="radio-option">
+                <input type="radio" id="gender3Girl" name="gender3" value="Girl">
+                <label for="gender3Girl">Girl</label>
+              </div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Weight</label>
+            <div style="display:flex; gap:0.8rem; align-items:flex-end;">
+              <div style="flex:1;"><input type="number" id="weight3Lbs" placeholder="lbs" min="0" max="20" inputmode="numeric"></div>
+              <div style="flex:1;"><input type="number" id="weight3Oz" placeholder="oz" min="0" max="15" step="0.1" inputmode="decimal"></div>
             </div>
           </div>
         </div>
@@ -550,18 +688,6 @@
             <div class="radio-option">
               <input type="radio" id="parityMultip" name="parity" value="Multip">
               <label for="parityMultip">Multip</label>
-            </div>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label>Weight</label>
-          <div style="display:flex; gap:0.8rem; align-items:flex-end;">
-            <div style="flex:1;">
-              <input type="number" id="weightLbs" placeholder="lbs" min="0" max="20" inputmode="numeric">
-            </div>
-            <div style="flex:1;">
-              <input type="number" id="weightOz" placeholder="oz" min="0" max="15" step="0.1" inputmode="decimal">
             </div>
           </div>
         </div>
@@ -653,20 +779,85 @@
           <h2>Edit Delivery</h2>
 
           <div class="form-group">
-            <label>Baby's Name</label>
-            <input type="text" id="editName" autocomplete="off">
-          </div>
-
-          <div class="form-group">
-            <label>Gender</label>
+            <label>Birth Type</label>
             <div class="radio-group">
               <div class="radio-option">
-                <input type="radio" id="editGenderBoy" name="editGender" value="Boy">
-                <label for="editGenderBoy">Boy</label>
+                <input type="radio" id="editBirthSingleton" name="editBirthType" value="Singleton" onchange="updateEditBabySections()">
+                <label for="editBirthSingleton">Singleton</label>
               </div>
               <div class="radio-option">
-                <input type="radio" id="editGenderGirl" name="editGender" value="Girl">
-                <label for="editGenderGirl">Girl</label>
+                <input type="radio" id="editBirthTwin" name="editBirthType" value="Twin" onchange="updateEditBabySections()">
+                <label for="editBirthTwin">Twin</label>
+              </div>
+              <div class="radio-option">
+                <input type="radio" id="editBirthTriplet" name="editBirthType" value="Triplet" onchange="updateEditBabySections()">
+                <label for="editBirthTriplet">Triplet</label>
+              </div>
+            </div>
+          </div>
+
+          <div class="baby-section" id="editBabySection1">
+            <div class="baby-section-label">Baby 1</div>
+            <div class="form-group">
+              <label>Baby's Name</label>
+              <input type="text" id="editName1" autocomplete="off">
+            </div>
+            <div class="form-group">
+              <label>Gender</label>
+              <div class="radio-group">
+                <div class="radio-option"><input type="radio" id="editGender1Boy" name="editGender1" value="Boy"><label for="editGender1Boy">Boy</label></div>
+                <div class="radio-option"><input type="radio" id="editGender1Girl" name="editGender1" value="Girl"><label for="editGender1Girl">Girl</label></div>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Weight</label>
+              <div style="display:flex; gap:0.8rem; align-items:flex-end;">
+                <div style="flex:1;"><input type="number" id="editWeight1Lbs" placeholder="lbs" min="0" max="20" inputmode="numeric"></div>
+                <div style="flex:1;"><input type="number" id="editWeight1Oz" placeholder="oz" min="0" max="15" step="0.1" inputmode="decimal"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="baby-section show-label" id="editBabySection2" style="display:none;">
+            <div class="baby-section-label">Baby 2</div>
+            <div class="form-group">
+              <label>Baby's Name</label>
+              <input type="text" id="editName2" autocomplete="off">
+            </div>
+            <div class="form-group">
+              <label>Gender</label>
+              <div class="radio-group">
+                <div class="radio-option"><input type="radio" id="editGender2Boy" name="editGender2" value="Boy"><label for="editGender2Boy">Boy</label></div>
+                <div class="radio-option"><input type="radio" id="editGender2Girl" name="editGender2" value="Girl"><label for="editGender2Girl">Girl</label></div>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Weight</label>
+              <div style="display:flex; gap:0.8rem; align-items:flex-end;">
+                <div style="flex:1;"><input type="number" id="editWeight2Lbs" placeholder="lbs" min="0" max="20" inputmode="numeric"></div>
+                <div style="flex:1;"><input type="number" id="editWeight2Oz" placeholder="oz" min="0" max="15" step="0.1" inputmode="decimal"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="baby-section show-label" id="editBabySection3" style="display:none;">
+            <div class="baby-section-label">Baby 3</div>
+            <div class="form-group">
+              <label>Baby's Name</label>
+              <input type="text" id="editName3" autocomplete="off">
+            </div>
+            <div class="form-group">
+              <label>Gender</label>
+              <div class="radio-group">
+                <div class="radio-option"><input type="radio" id="editGender3Boy" name="editGender3" value="Boy"><label for="editGender3Boy">Boy</label></div>
+                <div class="radio-option"><input type="radio" id="editGender3Girl" name="editGender3" value="Girl"><label for="editGender3Girl">Girl</label></div>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Weight</label>
+              <div style="display:flex; gap:0.8rem; align-items:flex-end;">
+                <div style="flex:1;"><input type="number" id="editWeight3Lbs" placeholder="lbs" min="0" max="20" inputmode="numeric"></div>
+                <div style="flex:1;"><input type="number" id="editWeight3Oz" placeholder="oz" min="0" max="15" step="0.1" inputmode="decimal"></div>
               </div>
             </div>
           </div>
@@ -682,14 +873,6 @@
                 <input type="radio" id="editParityMultip" name="editParity" value="Multip">
                 <label for="editParityMultip">Multip</label>
               </div>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label>Weight</label>
-            <div style="display:flex; gap:0.8rem; align-items:flex-end;">
-              <div style="flex:1;"><input type="number" id="editWeightLbs" placeholder="lbs" min="0" max="20" inputmode="numeric"></div>
-              <div style="flex:1;"><input type="number" id="editWeightOz" placeholder="oz" min="0" max="15" step="0.1" inputmode="decimal"></div>
             </div>
           </div>
 
@@ -783,6 +966,75 @@
 
     document.getElementById('gds-styles').textContent = GoogleDriveStorage.getStyles();
 
+    // --- Normalize legacy records (singleton without babies array) ---
+    function normalizeDelivery(d) {
+      if (!d.babies) {
+        d.birthType = 'Singleton';
+        d.babies = [{ name: d.name, gender: d.gender, weightLbs: d.weightLbs, weightOz: d.weightOz }];
+      }
+      if (!d.birthType) d.birthType = 'Singleton';
+      return d;
+    }
+
+    // --- Get all individual babies across all deliveries ---
+    function getAllBabies(list) {
+      var all = [];
+      list.forEach(function(d) {
+        var nd = normalizeDelivery(d);
+        nd.babies.forEach(function(b) { all.push(b); });
+      });
+      return all;
+    }
+
+    // --- Birth type form toggling ---
+    function getBabyCount(birthType) {
+      if (birthType === 'Triplet') return 3;
+      if (birthType === 'Twin') return 2;
+      return 1;
+    }
+
+    function updateBabySections() {
+      var birthType = document.querySelector('input[name="birthType"]:checked').value;
+      var count = getBabyCount(birthType);
+      var sec1 = document.getElementById('babySection1');
+      var sec2 = document.getElementById('babySection2');
+      var sec3 = document.getElementById('babySection3');
+
+      sec1.style.display = '';
+      sec2.style.display = count >= 2 ? '' : 'none';
+      sec3.style.display = count >= 3 ? '' : 'none';
+
+      if (count > 1) {
+        sec1.classList.add('show-label');
+      } else {
+        sec1.classList.remove('show-label');
+      }
+    }
+
+    document.querySelectorAll('input[name="birthType"]').forEach(function(r) {
+      r.addEventListener('change', updateBabySections);
+    });
+
+    function updateEditBabySections() {
+      var birthType = document.querySelector('input[name="editBirthType"]:checked');
+      if (!birthType) return;
+      var count = getBabyCount(birthType.value);
+      var sec1 = document.getElementById('editBabySection1');
+      var sec2 = document.getElementById('editBabySection2');
+      var sec3 = document.getElementById('editBabySection3');
+
+      sec1.style.display = '';
+      sec2.style.display = count >= 2 ? '' : 'none';
+      sec3.style.display = count >= 3 ? '' : 'none';
+
+      if (count > 1) {
+        sec1.classList.add('show-label');
+      } else {
+        sec1.classList.remove('show-label');
+      }
+    }
+
+    // --- Auth ---
     storage.renderAuthUI(document.getElementById('authSection'), {
       onSignIn: async () => {
         var cached = storage.getCachedData();
@@ -820,29 +1072,48 @@
       }
     });
 
+    // --- Form submission ---
     document.getElementById('deliveryForm').addEventListener('submit', function(e) {
       e.preventDefault();
 
-      const name = document.getElementById('babyName').value.trim();
-      const gender = document.querySelector('input[name="gender"]:checked');
-      const parity = document.querySelector('input[name="parity"]:checked');
-      const lbs = document.getElementById('weightLbs').value;
-      const oz = document.getElementById('weightOz').value;
-      const route = document.querySelector('input[name="route"]:checked');
-      const labored = document.querySelector('input[name="labored"]:checked');
-      const natural = document.querySelector('input[name="natural"]:checked');
-      const spinning = document.querySelector('input[name="spinning"]:checked');
-      const epidural = document.querySelector('input[name="epidural"]:checked');
+      var birthTypeEl = document.querySelector('input[name="birthType"]:checked');
+      var birthType = birthTypeEl ? birthTypeEl.value : 'Singleton';
+      var count = getBabyCount(birthType);
 
-      if (!name || !gender || !parity || !lbs || !route || !labored || !natural || !spinning || !epidural) return;
+      var parity = document.querySelector('input[name="parity"]:checked');
+      var route = document.querySelector('input[name="route"]:checked');
+      var labored = document.querySelector('input[name="labored"]:checked');
+      var natural = document.querySelector('input[name="natural"]:checked');
+      var spinning = document.querySelector('input[name="spinning"]:checked');
+      var epidural = document.querySelector('input[name="epidural"]:checked');
 
-      const delivery = {
+      if (!parity || !route || !labored || !natural || !spinning || !epidural) return;
+
+      var babies = [];
+      for (var i = 1; i <= count; i++) {
+        var name = document.getElementById('babyName' + i).value.trim();
+        var gender = document.querySelector('input[name="gender' + i + '"]:checked');
+        var lbs = document.getElementById('weight' + i + 'Lbs').value;
+
+        if (!name || !gender || !lbs) return;
+
+        babies.push({
+          name: name,
+          gender: gender.value,
+          weightLbs: parseInt(lbs),
+          weightOz: parseFloat(document.getElementById('weight' + i + 'Oz').value) || 0
+        });
+      }
+
+      var delivery = {
         id: Date.now().toString(),
-        name: name,
-        gender: gender.value,
+        birthType: birthType,
+        babies: babies,
+        name: babies[0].name,
+        gender: babies[0].gender,
+        weightLbs: babies[0].weightLbs,
+        weightOz: babies[0].weightOz,
         parity: parity.value,
-        weightLbs: parseInt(lbs),
-        weightOz: parseFloat(oz) || 0,
         route: route.value,
         labored: labored.value,
         natural: natural.value,
@@ -855,12 +1126,13 @@
       storage.save(deliveries);
       render();
 
-      // Reset form
       this.reset();
+      document.getElementById('birthSingleton').checked = true;
+      updateBabySections();
     });
 
     function formatWeight(lbs, oz) {
-      const ozStr = oz % 1 === 0 ? oz.toString() : oz.toFixed(1);
+      var ozStr = oz % 1 === 0 ? oz.toString() : oz.toFixed(1);
       return lbs + ' lbs ' + ozStr + ' oz';
     }
 
@@ -869,24 +1141,31 @@
     }
 
     function updateStats() {
-      const total = deliveries.length;
-      const boys = deliveries.filter(d => d.gender === 'Boy').length;
-      const girls = deliveries.filter(d => d.gender === 'Girl').length;
-      const primip = deliveries.filter(d => d.parity === 'Primip').length;
-      const multip = deliveries.filter(d => d.parity === 'Multip').length;
-      const vaginal = deliveries.filter(d => d.route === 'Vaginal').length;
-      const csection = deliveries.filter(d => d.route === 'C-Section').length;
-      const scheduled = deliveries.filter(d => d.route === 'Scheduled C-Section').length;
-      const labored = deliveries.filter(d => d.labored === 'Yes').length;
-      const notLabored = deliveries.filter(d => d.labored === 'No').length;
-      const natural = deliveries.filter(d => d.natural === 'Yes').length;
-      const spinning = deliveries.filter(d => d.spinning === 'Yes').length;
-      const epidural = deliveries.filter(d => d.epidural === 'Yes').length;
-      const noEpidural = deliveries.filter(d => d.epidural === 'No').length;
+      var total = deliveries.length;
+      var allBabies = getAllBabies(deliveries);
+      var totalBabies = allBabies.length;
+      var boys = allBabies.filter(function(b) { return b.gender === 'Boy'; }).length;
+      var girls = allBabies.filter(function(b) { return b.gender === 'Girl'; }).length;
+      var twins = deliveries.filter(function(d) { return normalizeDelivery(d).birthType === 'Twin'; }).length;
+      var triplets = deliveries.filter(function(d) { return normalizeDelivery(d).birthType === 'Triplet'; }).length;
+      var primip = deliveries.filter(function(d) { return d.parity === 'Primip'; }).length;
+      var multip = deliveries.filter(function(d) { return d.parity === 'Multip'; }).length;
+      var vaginal = deliveries.filter(function(d) { return d.route === 'Vaginal'; }).length;
+      var csection = deliveries.filter(function(d) { return d.route === 'C-Section'; }).length;
+      var scheduled = deliveries.filter(function(d) { return d.route === 'Scheduled C-Section'; }).length;
+      var labored = deliveries.filter(function(d) { return d.labored === 'Yes'; }).length;
+      var notLabored = deliveries.filter(function(d) { return d.labored === 'No'; }).length;
+      var natural = deliveries.filter(function(d) { return d.natural === 'Yes'; }).length;
+      var spinning = deliveries.filter(function(d) { return d.spinning === 'Yes'; }).length;
+      var epidural = deliveries.filter(function(d) { return d.epidural === 'Yes'; }).length;
+      var noEpidural = deliveries.filter(function(d) { return d.epidural === 'No'; }).length;
 
       document.getElementById('statTotal').textContent = total;
+      document.getElementById('statTotalBabies').textContent = totalBabies;
       document.getElementById('statBoys').textContent = boys;
       document.getElementById('statGirls').textContent = girls;
+      document.getElementById('statTwins').textContent = twins;
+      document.getElementById('statTriplets').textContent = triplets;
       document.getElementById('statPrimip').textContent = primip;
       document.getElementById('statMultip').textContent = multip;
       document.getElementById('statVaginal').textContent = vaginal;
@@ -899,11 +1178,11 @@
       document.getElementById('statEpidural').textContent = epidural;
       document.getElementById('statNoEpidural').textContent = noEpidural;
 
-      if (total > 0) {
-        let biggest = deliveries[0], smallest = deliveries[0];
-        deliveries.forEach(d => {
-          if (totalOunces(d.weightLbs, d.weightOz) > totalOunces(biggest.weightLbs, biggest.weightOz)) biggest = d;
-          if (totalOunces(d.weightLbs, d.weightOz) < totalOunces(smallest.weightLbs, smallest.weightOz)) smallest = d;
+      if (totalBabies > 0) {
+        var biggest = allBabies[0], smallest = allBabies[0];
+        allBabies.forEach(function(b) {
+          if (totalOunces(b.weightLbs, b.weightOz) > totalOunces(biggest.weightLbs, biggest.weightOz)) biggest = b;
+          if (totalOunces(b.weightLbs, b.weightOz) < totalOunces(smallest.weightLbs, smallest.weightOz)) smallest = b;
         });
         document.getElementById('statBiggest').textContent = formatWeight(biggest.weightLbs, biggest.weightOz);
         document.getElementById('statBiggestName').textContent = biggest.name;
@@ -918,8 +1197,8 @@
     }
 
     function renderList() {
-      const list = document.getElementById('deliveryList');
-      const title = document.getElementById('listTitle');
+      var list = document.getElementById('deliveryList');
+      var title = document.getElementById('listTitle');
 
       if (deliveries.length === 0) {
         title.style.display = 'none';
@@ -928,19 +1207,40 @@
       }
 
       title.style.display = 'block';
-      list.innerHTML = deliveries.map(d => {
-        const date = new Date(d.date);
-        const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      list.innerHTML = deliveries.map(function(d) {
+        var nd = normalizeDelivery(d);
+        var date = new Date(d.date);
+        var dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        var badge = nd.birthType !== 'Singleton' ? '<span class="birth-type-badge">' + nd.birthType + '</span>' : '';
+
+        var babiesHtml = nd.babies.map(function(b, idx) {
+          var label = nd.babies.length > 1 ? escapeHtml(b.name) : '';
+          var details = b.gender + ' &middot; ' + formatWeight(b.weightLbs, b.weightOz);
+          if (nd.babies.length > 1) {
+            return '<div class="baby-entry"><span class="baby-entry-name">' + escapeHtml(b.name) + '</span> &mdash; ' + details + '</div>';
+          }
+          return '';
+        }).join('');
+
+        var firstName = nd.babies.length > 1
+          ? nd.babies.map(function(b) { return escapeHtml(b.name); }).join(' & ')
+          : escapeHtml(nd.babies[0].name);
+
+        var singleDetails = nd.babies.length === 1
+          ? nd.babies[0].gender + ' &middot; ' + formatWeight(nd.babies[0].weightLbs, nd.babies[0].weightOz) + ' &middot; '
+          : '';
+
+        var sharedDetails = (nd.parity ? nd.parity + ' &middot; ' : '') + d.route +
+          (d.labored ? ' &middot; ' + (d.labored === 'Yes' ? 'Labored' : 'Not labored') : '') +
+          (d.natural === 'Yes' ? ' &middot; Natural' : '') +
+          (d.spinning === 'Yes' ? ' &middot; Spinning Babies' : '') +
+          (d.epidural ? ' &middot; ' + (d.epidural === 'Yes' ? 'Epidural' : 'No epidural') : '');
+
         return '<div class="delivery-item">' +
           '<div class="delivery-info">' +
-            '<div class="delivery-name">' + escapeHtml(d.name) + '</div>' +
-            '<div class="delivery-details">' +
-              d.gender + (d.parity ? ' &middot; ' + d.parity : '') + ' &middot; ' + formatWeight(d.weightLbs, d.weightOz) + ' &middot; ' + d.route +
-              (d.labored ? ' &middot; ' + (d.labored === 'Yes' ? 'Labored' : 'Not labored') : '') +
-              (d.natural === 'Yes' ? ' &middot; Natural' : '') +
-              (d.spinning === 'Yes' ? ' &middot; Spinning Babies' : '') +
-              (d.epidural ? ' &middot; ' + (d.epidural === 'Yes' ? 'Epidural' : 'No epidural') : '') +
-            '</div>' +
+            '<div class="delivery-name">' + firstName + badge + '</div>' +
+            babiesHtml +
+            '<div class="delivery-details">' + singleDetails + sharedDetails + '</div>' +
             '<div class="delivery-date">' + dateStr + '</div>' +
           '</div>' +
           '<div class="delivery-actions">' +
@@ -952,7 +1252,7 @@
     }
 
     function deleteDelivery(id) {
-      deliveries = deliveries.filter(d => d.id !== id);
+      deliveries = deliveries.filter(function(d) { return d.id !== id; });
       storage.save(deliveries);
       render();
     }
@@ -963,37 +1263,49 @@
     }
 
     function escapeHtml(str) {
-      const div = document.createElement('div');
+      var div = document.createElement('div');
       div.textContent = str;
       return div.innerHTML;
     }
 
     // --- Edit modal ---
-    let editingId = null;
+    var editingId = null;
 
     function setRadio(name, value) {
-      const el = document.querySelector('input[name="' + name + '"][value="' + value + '"]');
+      var el = document.querySelector('input[name="' + name + '"][value="' + value + '"]');
       if (el) el.checked = true;
     }
 
     function getRadio(name) {
-      const el = document.querySelector('input[name="' + name + '"]:checked');
+      var el = document.querySelector('input[name="' + name + '"]:checked');
       return el ? el.value : null;
     }
 
     function openEditModal(id) {
-      const d = deliveries.find(x => x.id === id);
+      var d = deliveries.find(function(x) { return x.id === id; });
       if (!d) return;
+      var nd = normalizeDelivery(d);
       editingId = id;
 
-      document.getElementById('editName').value = d.name;
-      document.getElementById('editWeightLbs').value = d.weightLbs;
-      document.getElementById('editWeightOz').value = d.weightOz || '';
-
       // Clear all edit radios first
-      document.querySelectorAll('.edit-modal input[type="radio"]').forEach(r => r.checked = false);
+      document.querySelectorAll('.edit-modal input[type="radio"]').forEach(function(r) { r.checked = false; });
 
-      setRadio('editGender', d.gender);
+      // Set birth type
+      setRadio('editBirthType', nd.birthType);
+      updateEditBabySections();
+
+      // Populate baby fields
+      for (var i = 0; i < 3; i++) {
+        var num = i + 1;
+        var baby = nd.babies[i];
+        document.getElementById('editName' + num).value = baby ? baby.name : '';
+        document.getElementById('editWeight' + num + 'Lbs').value = baby ? baby.weightLbs : '';
+        document.getElementById('editWeight' + num + 'Oz').value = baby ? (baby.weightOz || '') : '';
+        if (baby) {
+          setRadio('editGender' + num, baby.gender);
+        }
+      }
+
       setRadio('editParity', d.parity);
       setRadio('editRoute', d.route);
       setRadio('editLabored', d.labored);
@@ -1011,21 +1323,38 @@
     }
 
     function saveEdit() {
-      const d = deliveries.find(x => x.id === editingId);
+      var d = deliveries.find(function(x) { return x.id === editingId; });
       if (!d) return;
 
-      const name = document.getElementById('editName').value.trim();
-      const lbs = document.getElementById('editWeightLbs').value;
-      const gender = getRadio('editGender');
-      const route = getRadio('editRoute');
+      var birthType = getRadio('editBirthType') || 'Singleton';
+      var count = getBabyCount(birthType);
+      var route = getRadio('editRoute');
 
-      if (!name || !lbs || !gender || !route) return;
+      if (!route) return;
 
-      d.name = name;
-      d.gender = gender;
+      var babies = [];
+      for (var i = 1; i <= count; i++) {
+        var name = document.getElementById('editName' + i).value.trim();
+        var gender = getRadio('editGender' + i);
+        var lbs = document.getElementById('editWeight' + i + 'Lbs').value;
+
+        if (!name || !gender || !lbs) return;
+
+        babies.push({
+          name: name,
+          gender: gender,
+          weightLbs: parseInt(lbs),
+          weightOz: parseFloat(document.getElementById('editWeight' + i + 'Oz').value) || 0
+        });
+      }
+
+      d.birthType = birthType;
+      d.babies = babies;
+      d.name = babies[0].name;
+      d.gender = babies[0].gender;
+      d.weightLbs = babies[0].weightLbs;
+      d.weightOz = babies[0].weightOz;
       d.parity = getRadio('editParity') || d.parity;
-      d.weightLbs = parseInt(lbs);
-      d.weightOz = parseFloat(document.getElementById('editWeightOz').value) || 0;
       d.route = route;
       d.labored = getRadio('editLabored') || d.labored;
       d.natural = getRadio('editNatural') || d.natural;
