@@ -152,12 +152,25 @@
       log('Opening Google sign-in popup...', 'info');
       var provider = new firebase.auth.GoogleAuthProvider();
       provider.addScope('https://www.googleapis.com/auth/drive.appdata');
+      // Force the consent screen so Google issues a fresh OAuth access token
+      // with the Drive scope. Without this, an already-signed-in user gets
+      // a Firebase session refresh with no new OAuth credential.
+      provider.setCustomParameters({ prompt: 'consent' });
       try {
-        var result = await fbAuth.signInWithPopup(provider);
+        // If she's already signed in (from using the apps), reauthenticate
+        // instead of signInWithPopup — that's the call that actually returns
+        // a fresh OAuthCredential when there's an existing session.
+        var result;
+        if (fbAuth.currentUser) {
+          log('Already signed in — re-authenticating to grant Drive access...', 'info');
+          result = await fbAuth.currentUser.reauthenticateWithPopup(provider);
+        } else {
+          result = await fbAuth.signInWithPopup(provider);
+        }
         var credential = firebase.auth.GoogleAuthProvider.credentialFromResult(result);
         driveAccessToken = credential && credential.accessToken;
         if (!driveAccessToken) {
-          log('Drive access token not granted — re-sign in and accept the Drive permission.', 'err');
+          log('Drive access token not granted — make sure you check the Drive permission box in the consent screen.', 'err');
           return;
         }
         log('Signed in. Drive access granted.', 'ok');
