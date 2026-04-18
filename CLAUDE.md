@@ -148,61 +148,63 @@ Once enabled, everything pushed to `main` is live at `https://sethjones348.githu
 - Readable font sizes (min 16px body text)
 - Avoid hover-dependent interactions
 
-## Persistent Storage (Google Drive)
+## Persistent Storage (Firebase)
 
-All apps that need to persist user data should use **Google Sign-In + Google Drive**. Drive is the source of truth, and localStorage is a read-only cache for instant page loads.
+All apps use **Firebase Auth (Google sign-in) + Firebase Storage** for persistence. Firebase Storage is the source of truth (one JSON file per dataset), and localStorage is a read-only cache for instant page loads.
+
+The Firebase project is **`sierra-apps-af32e`**. Config lives in `shared/config.js` under `window.SIERRA_CONFIG.FIREBASE`.
+
+### Why Firebase Storage instead of Firestore
+
+Apps store one JSON blob per dataset, often containing inlined photos. Firestore documents cap at 1 MB which is too small. Firebase Storage has a 5 GB per-object limit (Blaze tier), so we keep the same "one JSON file per dataset" model the old Drive code used. Apps need no structural changes to their data.
 
 ### Architecture
 
-- **Google Drive `appDataFolder`** is the source of truth for app data
-- **localStorage** caches app data for instant page loads (read cache only — writes always go to Drive)
-- **Saves require a valid token.** If the token is expired, `save()` automatically attempts a silent refresh. If refresh fails, a full-screen overlay blocks the app until the user signs back in. No data is silently lost.
+- **Firebase Storage** at `users/{uid}/{fileName}` is the source of truth
+- **localStorage** caches app data for instant page loads (read cache only — writes always go to Firebase)
+- **Firebase Auth** (Google provider) handles sign-in. Firebase persists sessions via its own LOCAL persistence — no manual token refresh needed.
 - App content is hidden until the user signs in — show a "Sign in to ..." prompt instead
-- On sign-in, data is loaded from Drive (or from localStorage cache if no token is available)
+- On sign-in, data is loaded from Firebase Storage (or from localStorage cache for instant render)
 - On sign-out, all local state and caches are cleared and app content is hidden
-- Auth state (user identity, token, file IDs, data cache) is shared across all `GoogleDriveStorage` instances on the same page via the `_GDS` global — no need to manually share tokens between instances
+- Auth state is shared across all `FirebaseStorage` instances on the same page via the `_FBS` global
 
 ### How auth and data flow works
 
-1. **Page load with cached identity + valid token**: User shown as signed in immediately. `loadFromDrive()` loads from Drive, caches locally.
-2. **Page load with cached identity + expired token**: User shown as signed in with cached data. GIS library loads in background and attempts silent token refresh. If refresh succeeds, data reloads from Drive. If refresh fails, a full-screen reauth overlay appears prompting the user to sign back in.
-3. **Page load with no cached identity**: Sign-in button shown. User signs in interactively, data loads from Drive.
-4. **Save with valid token**: Data saved to Drive, then cached in localStorage.
-5. **Save with expired token**: `save()` auto-refreshes the token silently. If refresh succeeds, saves transparently. If refresh fails, reauth overlay blocks the app — `save()` returns `false`.
+1. **Page load with cached identity**: User shown as signed in immediately from `fbs-auth-user` cache. `onSignIn` fires once from cache (renders cached data), then again once Firebase Auth rehydrates (refreshes from Firebase).
+2. **Page load with no cached identity**: Sign-in button shown. After click, `signInWithPopup` runs, then `onSignIn` fires.
+3. **Save**: Always writes to Firebase Storage. Returns `false` and shows a "Save failed" status on error. No silent caching of failed writes.
+4. **Token expiry**: Firebase SDK refreshes its own ID tokens silently behind the scenes. If the user has been gone long enough that the refresh token is invalid, the next save throws and `onAuthStateChanged` fires with `user: null` — the app sees `onSignOut` and shows the sign-in prompt.
 
-### Auth session persistence
+### localStorage keys the library uses
 
-The shared library caches these in `localStorage`:
+- **`fbs-auth-user`** — name and picture, so the signed-in UI renders instantly. Cleared on explicit sign-out.
+- **`fbs-data-<filename>`** — copy of the Firebase Storage file for instant page loads.
 
-1. **User info** (`gds-auth-user`) — name and picture, so the signed-in UI renders instantly on page load. Persists until explicit sign-out.
-2. **Access token + expiry** (`gds-auth-token`) — Google OAuth tokens last ~1 hour. Used directly if still valid; otherwise a silent refresh is attempted.
-3. **Drive file IDs** (`gds-file-<filename>`) — so `loadFromDrive()` skips the file search and reads directly (1 API call instead of 2).
-4. **App data cache** (`gds-data-<filename>`) — a copy of the Drive file contents for instant page loads.
+(Firebase Auth manages its own keys under `firebase:authUser:*`.)
 
-**Rules to follow — do NOT violate these:**
+### Rules to follow — do NOT violate these
 
-- **Never use dirty flags or local-only saves.** Saves must go to Drive or fail visibly. No silent local caching of writes.
-- **Never wait for Google's GIS library to load before restoring a cached session.** Cached identity and data are available immediately. GIS is only needed for token requests.
-- **Never do a file search (`_findDriveFile`) on every page load.** Cache the Drive file ID after the first lookup. Only re-search if the cached ID fails.
+- **Never use dirty flags or local-only saves.** Saves must go to Firebase or fail visibly. No silent local caching of writes.
+- **Never wait for Firebase to initialize before showing the cached UI.** Cached identity and data are available immediately on page load.
 - **Constructor takes only `fileName`.** The library manages its own cache keys internally.
-- **Never manually share tokens between instances** (e.g., `photoStorage.accessToken = storage.accessToken`). All instances share auth state automatically via the `_GDS` global.
+- **Never manually share auth state between instances.** All instances share auth automatically via the `_FBS` global.
 
 ### Shared libraries
 
 Two shared files in `shared/` provide everything needed:
 
-1. **`shared/config.js`** — Contains the Google OAuth Client ID (shared across all apps)
-2. **`shared/google-drive-storage.js`** — `GoogleDriveStorage` class that handles auth UI, sign-in/out, and Drive read/write
-
-The Google OAuth Client ID is: `437861067044-r6m2ndd5bqgd0u82f1rjq8a3nv91fc3q.apps.googleusercontent.com`
+1. **`shared/config.js`** — `SIERRA_CONFIG.FIREBASE` web app config
+2. **`shared/firebase-storage.js`** — `FirebaseStorage` class that handles auth UI, sign-in/out, and Firebase Storage read/write
 
 ### How to add storage to a new app
 
 1. Add these script tags to the app's `<head>` (in this order):
    ```html
-   <script src="https://accounts.google.com/gsi/client" async defer></script>
+   <script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-app-compat.js"></script>
+   <script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-auth-compat.js"></script>
+   <script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-storage-compat.js"></script>
    <script src="/sierra-apps/shared/config.js"></script>
-   <script src="/sierra-apps/shared/google-drive-storage.js"></script>
+   <script src="/sierra-apps/shared/firebase-storage.js"></script>
    ```
 
 2. Add a `<style>` tag for the auth UI styles and loading state:
@@ -227,63 +229,47 @@ The Google OAuth Client ID is: `437861067044-r6m2ndd5bqgd0u82f1rjq8a3nv91fc3q.ap
    ```html
    <div id="authSection"></div>
 
-   <!-- Shown when not signed in -->
    <div class="signin-prompt" id="signinPrompt">
      <p>Sign in to see your data</p>
    </div>
 
-   <!-- Loading state (shown while data loads on first visit) -->
    <div class="loading-state" id="loadingState">
      <div class="loading-spinner"></div>
      <div class="loading-text">Gathering...</div>
    </div>
 
-   <!-- Hidden until signed in -->
    <div id="appContent" style="display:none;">
      <!-- Your app content here -->
    </div>
    ```
 
-4. In your app's JavaScript, declare ALL state variables and storage instances BEFORE calling `renderAuthUI`. The `onSignIn` callback is called synchronously during initialization, so any variables it references must already be declared.
+4. In your app's JavaScript, declare ALL state variables and storage instances BEFORE calling `renderAuthUI`:
 
    ```javascript
-   // --- State (MUST be declared before renderAuthUI) ---
    let myData = defaultValue;
 
-   // --- Storage instances (MUST be declared before renderAuthUI) ---
-   const storage = new GoogleDriveStorage('my-app-data.json');
+   const storage = new FirebaseStorage('my-app-data.json');
 
-   // Inject the auth UI styles
-   document.getElementById('gds-styles').textContent = GoogleDriveStorage.getStyles();
+   document.getElementById('gds-styles').textContent = FirebaseStorage.getStyles();
 
-   // Render the sign-in/sign-out UI
-   // NOTE: onSignIn may be called more than once (once with cached data on
-   // page load, again after a background token refresh loads fresh Drive data).
-   // This is normal — treat it as idempotent.
+   // NOTE: onSignIn may be called more than once (once with cached identity on
+   // page load, again after Firebase Auth rehydrates). Treat it as idempotent.
    storage.renderAuthUI(document.getElementById('authSection'), {
      onSignIn: async () => {
-       // Try cached data first for instant render (no spinner)
        var cached = storage.getCachedData();
-
        if (cached !== null) {
-         // Cache hit — show instantly, then refresh from Drive in background
          myData = cached;
          document.getElementById('signinPrompt').style.display = 'none';
          document.getElementById('loadingState').style.display = 'none';
          document.getElementById('appContent').style.display = 'block';
          render();
-
-         // Background refresh from Drive
-         var fresh = await storage.loadFromDrive();
+         var fresh = await storage.load();
          if (fresh !== null) { myData = fresh; render(); }
        } else {
-         // No cache — show loading spinner while loading from Drive
          document.getElementById('signinPrompt').style.display = 'none';
          document.getElementById('appContent').style.display = 'none';
          document.getElementById('loadingState').style.display = 'block';
-
-         myData = await storage.loadFromDrive() || defaultValue;
-
+         myData = await storage.load() || defaultValue;
          document.getElementById('loadingState').style.display = 'none';
          document.getElementById('appContent').style.display = 'block';
          render();
@@ -297,23 +283,36 @@ The Google OAuth Client ID is: `437861067044-r6m2ndd5bqgd0u82f1rjq8a3nv91fc3q.ap
      }
    });
 
-   // Save data (caches locally + writes to Drive if token available)
    storage.save(myData);
    ```
 
 ### Important notes
 
-- **Every piece of app data that needs to persist MUST be stored in Google Drive** via a `GoogleDriveStorage` instance. If you're adding a new data model (e.g., photos, settings, categories), create a new `GoogleDriveStorage('my-app-newmodel.json')` instance for it and use `save()` / `loadFromDrive()`. Do not store data only in JavaScript variables or only in localStorage — it must round-trip through Drive.
-- Each app MUST use a **unique file name** for its Drive file (e.g., `outdoor-hours-data.json`, `budget-data.json`)
-- **Do not manually manage localStorage for app data.** The shared library handles all caching (data, auth, file IDs) internally.
-- **Declare ALL state variables and `GoogleDriveStorage` instances BEFORE calling `renderAuthUI`.** The `onSignIn` callback runs synchronously during `_initAuth`, so any variable it references must already be initialized — otherwise you get a temporal dead zone `ReferenceError`.
-- **Always use cache-first rendering in `onSignIn`.** Check `storage.getCachedData()` first. If cached data exists, render instantly (no spinner), then refresh from Drive in the background. Only show the loading spinner on first visit when no cache exists.
+- **Every piece of app data that needs to persist MUST be stored in Firebase Storage** via a `FirebaseStorage` instance. If you're adding a new data model (e.g., photos, settings, categories), create a new `FirebaseStorage('my-app-newmodel.json')` instance for it and use `save()` / `load()`.
+- Each app MUST use a **unique file name** for its Firebase Storage file
+- **Do not manually manage localStorage for app data.** The shared library handles all caching internally.
+- **Declare ALL state variables and `FirebaseStorage` instances BEFORE calling `renderAuthUI`.** The `onSignIn` callback may run synchronously during initialization.
+- **Always use cache-first rendering in `onSignIn`.** Check `storage.getCachedData()` first.
 - App content must be **hidden until the user signs in** — show a friendly sign-in prompt instead
-- On sign-out, **clear all in-memory state**, hide app content AND the loading state, and show the sign-in prompt. The shared library clears all `gds-*` localStorage keys automatically.
-- The sign-in button, sync status, and reauth overlay are handled automatically by the shared library
-- The OAuth Client ID is configured for the origin `https://sethjones348.github.io` — no per-app setup needed
-- Multiple pages in the same app (e.g., `index.html` and `album.html`) each create their own `GoogleDriveStorage` instance — this is fine, they share the same auth state via the `_GDS` global and the same cached token via localStorage
-- Multiple `GoogleDriveStorage` instances on the same page (e.g., one for data, one for photos) share auth state automatically — do not manually copy tokens between instances
+- On sign-out, **clear all in-memory state**, hide app content AND the loading state, and show the sign-in prompt. The shared library clears all `fbs-*` localStorage keys automatically.
+- Multiple pages in the same app each create their own `FirebaseStorage` instance — this is fine, they share auth state via the `_FBS` global
+- Multiple `FirebaseStorage` instances on the same page share auth state automatically
+
+### Drive→Firebase migration
+
+For users with existing Google Drive data from the old `GoogleDriveStorage` library, there's a one-time migration page at `/sierra-apps/migrate.html`. It signs the user into Google with both Firebase Auth and Drive `appdata` scopes, then copies each known JSON file from Drive to Firebase Storage. Drive files are not deleted, so the original data remains as a backup.
+
+### Firebase project management
+
+The Firebase project is `sierra-apps-af32e`. Common admin tasks:
+
+```bash
+firebase deploy --only firestore:rules,storage  # deploy security rules
+firebase apps:sdkconfig WEB                     # show web app config
+gcloud storage buckets describe gs://sierra-apps-af32e.firebasestorage.app  # bucket info
+```
+
+`firestore.rules`, `storage.rules`, `firebase.json`, and `.firebaserc` live at the repo root.
 
 ## Running an Existing App
 

@@ -7,9 +7,11 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-storage-compat.js"></script>
   <script src="/sierra-apps/shared/config.js"></script>
-  <script src="/sierra-apps/shared/google-drive-storage.js"></script>
+  <script src="/sierra-apps/shared/firebase-storage.js"></script>
   <style id="gds-styles"></style>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -962,9 +964,9 @@
 
   <script>
     let deliveries = [];
-    const storage = new GoogleDriveStorage('baby-deliveries-data.json');
+    const storage = new FirebaseStorage('baby-deliveries-data.json');
 
-    document.getElementById('gds-styles').textContent = GoogleDriveStorage.getStyles();
+    document.getElementById('gds-styles').textContent = FirebaseStorage.getStyles();
 
     // --- Normalize legacy records (singleton without babies array) ---
     function normalizeDelivery(d) {
