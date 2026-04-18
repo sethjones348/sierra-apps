@@ -36,6 +36,12 @@ venv/
 *.log
 npm-debug.log*
 
+# Claude Code session state
+.claude/
+
+# Firebase CLI cache
+.firebase/
+
 # Testing
 coverage/
 

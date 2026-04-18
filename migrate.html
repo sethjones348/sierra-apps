@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Migrate Drive → Firebase</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-storage-compat.js"></script>
+  <script src="/sierra-apps/shared/config.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'DM Sans', sans-serif; font-weight: 300;
+      background: #FAF8F5; color: #2C2C2C; min-height: 100vh;
+      -webkit-font-smoothing: antialiased; padding: 3rem 1.5rem;
+    }
+    .container { max-width: 500px; margin: 0 auto; }
+    h1 {
+      font-family: 'Playfair Display', serif; font-weight: 400;
+      font-size: 1.8rem; letter-spacing: 0.06em; text-transform: uppercase;
+      text-align: center; margin-bottom: 0.4rem;
+    }
+    .sub {
+      text-align: center; color: #8A8478; font-size: 0.75rem;
+      letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 2.5rem;
+    }
+    .description {
+      color: #5A554E; font-size: 0.85rem; line-height: 1.6;
+      margin-bottom: 2rem; padding: 1.2rem; background: #FFFFFF;
+      border: 1px solid #E8E4DF; border-radius: 8px;
+    }
+    .description b { font-weight: 500; color: #2C2C2C; }
+    button {
+      width: 100%; display: inline-flex; align-items: center; justify-content: center;
+      gap: 0.6rem; font-family: 'DM Sans', sans-serif; font-size: 0.85rem;
+      font-weight: 400; letter-spacing: 0.12em; text-transform: uppercase;
+      border: 1px solid #2C2C2C; background: #2C2C2C; color: #FAF8F5;
+      padding: 1rem 1.5rem; border-radius: 30px; cursor: pointer;
+      transition: opacity 0.2s ease; min-height: 50px; margin-bottom: 1rem;
+    }
+    button:active { opacity: 0.7; }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+    button.secondary {
+      background: #FFFFFF; color: #2C2C2C; border: 1px solid #D5D0CA;
+    }
+    .log {
+      margin-top: 2rem; padding: 1.2rem; background: #FFFFFF;
+      border: 1px solid #E8E4DF; border-radius: 8px; min-height: 100px;
+      font-family: 'DM Sans', monospace; font-size: 0.78rem; line-height: 1.7;
+      color: #5A554E; max-height: 400px; overflow-y: auto;
+    }
+    .log .ok { color: #6E8A55; }
+    .log .err { color: #C46A6A; }
+    .log .info { color: #8A8478; }
+    .row { display: flex; gap: 0.6rem; }
+    .row button { flex: 1; }
+    .home {
+      display: block; text-align: center; margin-top: 2rem;
+      color: #8A8478; font-size: 0.7rem; letter-spacing: 0.15em;
+      text-transform: uppercase; text-decoration: none;
+    }
+    .home:active { opacity: 0.6; }
+    .signed-in {
+      text-align: center; padding: 0.8rem; background: #F1EEE8;
+      border-radius: 6px; margin-bottom: 1.5rem; font-size: 0.8rem; color: #5A554E;
+    }
+    .signed-in b { color: #2C2C2C; font-weight: 500; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Migration</h1>
+    <p class="sub">Drive &rarr; Firebase</p>
+
+    <div class="description">
+      <b>One-time data move.</b> This page reads your existing Sierra Apps
+      data from Google Drive and copies it into the new Firebase storage.
+      Sign in with the same Google account both times.
+      <br><br>
+      Old Drive files are <b>not deleted</b> — they remain in your Drive's
+      hidden app folder as a backup.
+    </div>
+
+    <div id="status"></div>
+
+    <button id="signInBtn">Step 1 &middot; Sign in with Google</button>
+    <button id="migrateBtn" disabled>Step 2 &middot; Run Migration</button>
+
+    <div class="log" id="log">
+      <span class="info">Ready. Sign in to begin.</span>
+    </div>
+
+    <a class="home" href="/sierra-apps/">&larr; Back to apps</a>
+  </div>
+
+  <script>
+    var KNOWN_FILES = [
+      'baby-deliveries-data.json',
+      'outdoor-hours-data.json',
+      'outdoor-hours-photos.json',
+      'outdoor-hours-family.json',
+    ];
+
+    var driveAccessToken = null;
+    var firebaseUser = null;
+    var fbApp = null;
+    var fbAuth = null;
+    var fbStorage = null;
+
+    var logEl = document.getElementById('log');
+    var statusEl = document.getElementById('status');
+    var signInBtn = document.getElementById('signInBtn');
+    var migrateBtn = document.getElementById('migrateBtn');
+
+    function log(msg, cls) {
+      var line = document.createElement('div');
+      line.className = cls || '';
+      line.textContent = msg;
+      logEl.appendChild(line);
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    function updateStatus() {
+      if (firebaseUser) {
+        statusEl.innerHTML = '<div class="signed-in">Signed in as <b>' +
+          (firebaseUser.email || firebaseUser.displayName || 'user') + '</b></div>';
+        migrateBtn.disabled = !driveAccessToken;
+      } else {
+        statusEl.innerHTML = '';
+        migrateBtn.disabled = true;
+      }
+    }
+
+    function initFirebase() {
+      if (fbApp) return;
+      fbApp = firebase.initializeApp(window.SIERRA_CONFIG.FIREBASE);
+      fbAuth = firebase.auth();
+      fbStorage = firebase.storage();
+      fbAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(function() {});
+      fbAuth.onAuthStateChanged(function(user) {
+        firebaseUser = user;
+        updateStatus();
+      });
+    }
+
+    signInBtn.addEventListener('click', async function() {
+      initFirebase();
+      log('Opening Google sign-in popup...', 'info');
+      var provider = new firebase.auth.GoogleAuthProvider();
+      provider.addScope('https://www.googleapis.com/auth/drive.appdata');
+      try {
+        var result = await fbAuth.signInWithPopup(provider);
+        var credential = firebase.auth.GoogleAuthProvider.credentialFromResult(result);
+        driveAccessToken = credential && credential.accessToken;
+        if (!driveAccessToken) {
+          log('Drive access token not granted — re-sign in and accept the Drive permission.', 'err');
+          return;
+        }
+        log('Signed in. Drive access granted.', 'ok');
+        updateStatus();
+      } catch (e) {
+        log('Sign-in failed: ' + (e.message || e), 'err');
+      }
+    });
+
+    async function findDriveFile(name) {
+      var query = encodeURIComponent("name='" + name + "' and trashed=false");
+      var res = await fetch(
+        'https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=' + query + '&fields=files(id,name,size)',
+        { headers: { Authorization: 'Bearer ' + driveAccessToken } }
+      );
+      if (!res.ok) throw new Error('Drive search failed: HTTP ' + res.status);
+      var data = await res.json();
+      return (data.files && data.files.length > 0) ? data.files[0] : null;
+    }
+
+    async function readDriveFile(fileId) {
+      var res = await fetch(
+        'https://www.googleapis.com/drive/v3/files/' + fileId + '?alt=media',
+        { headers: { Authorization: 'Bearer ' + driveAccessToken } }
+      );
+      if (!res.ok) throw new Error('Drive read failed: HTTP ' + res.status);
+      return res.text(); // raw JSON text — preserves exact bytes
+    }
+
+    async function writeFirebaseFile(name, jsonText) {
+      var ref = fbStorage.ref('users/' + firebaseUser.uid + '/' + name);
+      var blob = new Blob([jsonText], { type: 'application/json' });
+      await ref.put(blob, { contentType: 'application/json' });
+    }
+
+    migrateBtn.addEventListener('click', async function() {
+      if (!firebaseUser || !driveAccessToken) {
+        log('Sign in first.', 'err');
+        return;
+      }
+      migrateBtn.disabled = true;
+      signInBtn.disabled = true;
+      log('---', 'info');
+      log('Starting migration for ' + (firebaseUser.email || firebaseUser.uid), 'info');
+
+      var migrated = 0;
+      var skipped = 0;
+      var failed = 0;
+
+      for (var i = 0; i < KNOWN_FILES.length; i++) {
+        var name = KNOWN_FILES[i];
+        try {
+          log('Looking up ' + name + ' in Drive...', 'info');
+          var file = await findDriveFile(name);
+          if (!file) {
+            log('  not found in Drive — skipping', 'info');
+            skipped++;
+            continue;
+          }
+          var sizeKb = file.size ? Math.round(file.size / 1024) : '?';
+          log('  found (' + sizeKb + ' KB), reading...', 'info');
+          var text = await readDriveFile(file.id);
+          log('  uploading to Firebase Storage...', 'info');
+          await writeFirebaseFile(name, text);
+          log('  ' + name + ' migrated', 'ok');
+          migrated++;
+        } catch (e) {
+          log('  failed: ' + (e.message || e), 'err');
+          failed++;
+        }
+      }
+
+      log('---', 'info');
+      log('Migrated: ' + migrated + ' | Skipped: ' + skipped + ' | Failed: ' + failed,
+          failed > 0 ? 'err' : 'ok');
+      if (failed === 0 && migrated > 0) {
+        log('All done. Open the apps and confirm your data is there.', 'ok');
+      } else if (migrated === 0 && skipped === KNOWN_FILES.length) {
+        log('Nothing to migrate — no Drive files found. (You may already be migrated.)', 'info');
+      }
+
+      migrateBtn.disabled = false;
+      signInBtn.disabled = false;
+    });
+
+    initFirebase();
+  </script>
+</body>
+</html>
