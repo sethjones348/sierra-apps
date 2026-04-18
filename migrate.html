@@ -10,6 +10,7 @@
   <script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-storage-compat.js"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="/sierra-apps/shared/config.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -147,33 +148,50 @@
       });
     }
 
-    signInBtn.addEventListener('click', async function() {
-      initFirebase();
-      log('Opening Google sign-in popup...', 'info');
-      var provider = new firebase.auth.GoogleAuthProvider();
-      provider.addScope('https://www.googleapis.com/auth/drive.appdata');
-      // Force the consent screen so Google issues a fresh OAuth access token
-      // with the Drive scope. Without this, an already-signed-in user gets
-      // a Firebase session refresh with no new OAuth credential.
-      provider.setCustomParameters({ prompt: 'consent' });
-      try {
-        // If she's already signed in (from using the apps), reauthenticate
-        // instead of signInWithPopup — that's the call that actually returns
-        // a fresh OAuthCredential when there's an existing session.
-        var result;
-        if (fbAuth.currentUser) {
-          log('Already signed in — re-authenticating to grant Drive access...', 'info');
-          result = await fbAuth.currentUser.reauthenticateWithPopup(provider);
-        } else {
-          result = await fbAuth.signInWithPopup(provider);
-        }
-        var credential = firebase.auth.GoogleAuthProvider.credentialFromResult(result);
-        driveAccessToken = credential && credential.accessToken;
-        if (!driveAccessToken) {
-          log('Drive access token not granted — make sure you check the Drive permission box in the consent screen.', 'err');
+    function requestDriveTokenViaGIS(emailHint) {
+      // Use Google Identity Services directly — Firebase Auth's
+      // OAuthCredential extraction has been unreliable for the Drive scope on
+      // re-auth, so we ask GIS for a token scoped just to drive.appdata.
+      return new Promise(function(resolve, reject) {
+        if (!window.google || !google.accounts || !google.accounts.oauth2) {
+          reject(new Error('Google Identity Services not loaded yet — refresh and try again.'));
           return;
         }
-        log('Signed in. Drive access granted.', 'ok');
+        var tokenClient = google.accounts.oauth2.initTokenClient({
+          client_id: window.SIERRA_CONFIG.GOOGLE_CLIENT_ID,
+          scope: 'https://www.googleapis.com/auth/drive.appdata',
+          prompt: '',
+          hint: emailHint || '',
+          callback: function(resp) {
+            if (resp && resp.access_token) resolve(resp.access_token);
+            else reject(new Error(resp && resp.error_description || 'No access token returned'));
+          },
+          error_callback: function(err) {
+            reject(new Error((err && err.message) || 'Drive permission denied'));
+          },
+        });
+        tokenClient.requestAccessToken();
+      });
+    }
+
+    signInBtn.addEventListener('click', async function() {
+      initFirebase();
+      try {
+        // Step 1a: ensure we're signed in to Firebase (so we have a UID
+        // for the Storage write path). No Drive scope here — just basic sign-in.
+        if (!fbAuth.currentUser) {
+          log('Signing in to Firebase...', 'info');
+          var provider = new firebase.auth.GoogleAuthProvider();
+          await fbAuth.signInWithPopup(provider);
+        }
+        var emailHint = (fbAuth.currentUser && fbAuth.currentUser.email) || '';
+
+        // Step 1b: ask Google Identity Services for a Drive access token
+        // for the same account. This will pop a consent screen the first
+        // time and silently grant on subsequent clicks.
+        log('Requesting Drive access for ' + emailHint + '...', 'info');
+        driveAccessToken = await requestDriveTokenViaGIS(emailHint);
+        log('Drive access granted.', 'ok');
         updateStatus();
       } catch (e) {
         log('Sign-in failed: ' + (e.message || e), 'err');
