@@ -205,7 +205,8 @@
       flex: 1;
     }
 
-    .radio-option input[type="radio"] {
+    .radio-option input[type="radio"],
+    .radio-option input[type="checkbox"] {
       display: none;
     }
 
@@ -226,10 +227,25 @@
       min-height: 44px;
     }
 
-    .radio-option input[type="radio"]:checked + label {
+    .radio-option input[type="radio"]:checked + label,
+    .radio-option input[type="checkbox"]:checked + label {
       border-color: #C5A46D;
       color: #2C2C2C;
       background: rgba(197, 164, 109, 0.08);
+    }
+
+    .angel-badge {
+      display: inline-block;
+      font-size: 0.6rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #C4A68A;
+      border: 1px solid #C4A68A;
+      border-radius: 3px;
+      padding: 0.1rem 0.4rem;
+      margin-left: 0.4rem;
+      vertical-align: middle;
+      font-weight: 400;
     }
 
     .btn-add {
@@ -509,6 +525,10 @@
             <div class="stat-value" id="statGirls">0</div>
             <div class="stat-label">Girls</div>
           </div>
+          <div class="stat-card full-width">
+            <div class="stat-value" id="statAngels">0</div>
+            <div class="stat-label">Angel Babies</div>
+          </div>
           <div class="stat-card">
             <div class="stat-value" id="statTwins">0</div>
             <div class="stat-label">Twins</div>
@@ -622,6 +642,14 @@
               <div style="flex:1;"><input type="number" id="weight1Oz" placeholder="oz" min="0" max="15" step="0.1" inputmode="decimal"></div>
             </div>
           </div>
+          <div class="form-group">
+            <div class="radio-group">
+              <div class="radio-option" style="flex-basis:100%;">
+                <input type="checkbox" id="angel1" name="angel1">
+                <label for="angel1">Angel Baby</label>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="baby-section show-label" id="babySection2" style="display:none;">
@@ -650,6 +678,14 @@
               <div style="flex:1;"><input type="number" id="weight2Oz" placeholder="oz" min="0" max="15" step="0.1" inputmode="decimal"></div>
             </div>
           </div>
+          <div class="form-group">
+            <div class="radio-group">
+              <div class="radio-option" style="flex-basis:100%;">
+                <input type="checkbox" id="angel2" name="angel2">
+                <label for="angel2">Angel Baby</label>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="baby-section show-label" id="babySection3" style="display:none;">
@@ -676,6 +712,14 @@
             <div style="display:flex; gap:0.8rem; align-items:flex-end;">
               <div style="flex:1;"><input type="number" id="weight3Lbs" placeholder="lbs" min="0" max="20" inputmode="numeric"></div>
               <div style="flex:1;"><input type="number" id="weight3Oz" placeholder="oz" min="0" max="15" step="0.1" inputmode="decimal"></div>
+            </div>
+          </div>
+          <div class="form-group">
+            <div class="radio-group">
+              <div class="radio-option" style="flex-basis:100%;">
+                <input type="checkbox" id="angel3" name="angel3">
+                <label for="angel3">Angel Baby</label>
+              </div>
             </div>
           </div>
         </div>
@@ -818,6 +862,14 @@
                 <div style="flex:1;"><input type="number" id="editWeight1Oz" placeholder="oz" min="0" max="15" step="0.1" inputmode="decimal"></div>
               </div>
             </div>
+            <div class="form-group">
+              <div class="radio-group">
+                <div class="radio-option" style="flex-basis:100%;">
+                  <input type="checkbox" id="editAngel1" name="editAngel1">
+                  <label for="editAngel1">Angel Baby</label>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div class="baby-section show-label" id="editBabySection2" style="display:none;">
@@ -840,6 +892,14 @@
                 <div style="flex:1;"><input type="number" id="editWeight2Oz" placeholder="oz" min="0" max="15" step="0.1" inputmode="decimal"></div>
               </div>
             </div>
+            <div class="form-group">
+              <div class="radio-group">
+                <div class="radio-option" style="flex-basis:100%;">
+                  <input type="checkbox" id="editAngel2" name="editAngel2">
+                  <label for="editAngel2">Angel Baby</label>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div class="baby-section show-label" id="editBabySection3" style="display:none;">
@@ -860,6 +920,14 @@
               <div style="display:flex; gap:0.8rem; align-items:flex-end;">
                 <div style="flex:1;"><input type="number" id="editWeight3Lbs" placeholder="lbs" min="0" max="20" inputmode="numeric"></div>
                 <div style="flex:1;"><input type="number" id="editWeight3Oz" placeholder="oz" min="0" max="15" step="0.1" inputmode="decimal"></div>
+              </div>
+            </div>
+            <div class="form-group">
+              <div class="radio-group">
+                <div class="radio-option" style="flex-basis:100%;">
+                  <input type="checkbox" id="editAngel3" name="editAngel3">
+                  <label for="editAngel3">Angel Baby</label>
+                </div>
               </div>
             </div>
           </div>
@@ -1103,7 +1171,8 @@
           name: name,
           gender: gender.value,
           weightLbs: parseInt(lbs),
-          weightOz: parseFloat(document.getElementById('weight' + i + 'Oz').value) || 0
+          weightOz: parseFloat(document.getElementById('weight' + i + 'Oz').value) || 0,
+          angel: document.getElementById('angel' + i).checked
         });
       }
 
@@ -1148,6 +1217,7 @@
       var totalBabies = allBabies.length;
       var boys = allBabies.filter(function(b) { return b.gender === 'Boy'; }).length;
       var girls = allBabies.filter(function(b) { return b.gender === 'Girl'; }).length;
+      var angels = allBabies.filter(function(b) { return b.angel === true; }).length;
       var twins = deliveries.filter(function(d) { return normalizeDelivery(d).birthType === 'Twin'; }).length;
       var triplets = deliveries.filter(function(d) { return normalizeDelivery(d).birthType === 'Triplet'; }).length;
       var primip = deliveries.filter(function(d) { return d.parity === 'Primip'; }).length;
@@ -1166,6 +1236,7 @@
       document.getElementById('statTotalBabies').textContent = totalBabies;
       document.getElementById('statBoys').textContent = boys;
       document.getElementById('statGirls').textContent = girls;
+      document.getElementById('statAngels').textContent = angels;
       document.getElementById('statTwins').textContent = twins;
       document.getElementById('statTriplets').textContent = triplets;
       document.getElementById('statPrimip').textContent = primip;
@@ -1218,8 +1289,9 @@
         var babiesHtml = nd.babies.map(function(b, idx) {
           var label = nd.babies.length > 1 ? escapeHtml(b.name) : '';
           var details = b.gender + ' &middot; ' + formatWeight(b.weightLbs, b.weightOz);
+          var angelBadge = b.angel ? '<span class="angel-badge">Angel</span>' : '';
           if (nd.babies.length > 1) {
-            return '<div class="baby-entry"><span class="baby-entry-name">' + escapeHtml(b.name) + '</span> &mdash; ' + details + '</div>';
+            return '<div class="baby-entry"><span class="baby-entry-name">' + escapeHtml(b.name) + '</span>' + angelBadge + ' &mdash; ' + details + '</div>';
           }
           return '';
         }).join('');
@@ -1227,6 +1299,9 @@
         var firstName = nd.babies.length > 1
           ? nd.babies.map(function(b) { return escapeHtml(b.name); }).join(' & ')
           : escapeHtml(nd.babies[0].name);
+
+        var singletonAngel = (nd.babies.length === 1 && nd.babies[0].angel)
+          ? '<span class="angel-badge">Angel</span>' : '';
 
         var singleDetails = nd.babies.length === 1
           ? nd.babies[0].gender + ' &middot; ' + formatWeight(nd.babies[0].weightLbs, nd.babies[0].weightOz) + ' &middot; '
@@ -1240,7 +1315,7 @@
 
         return '<div class="delivery-item">' +
           '<div class="delivery-info">' +
-            '<div class="delivery-name">' + firstName + badge + '</div>' +
+            '<div class="delivery-name">' + firstName + badge + singletonAngel + '</div>' +
             babiesHtml +
             '<div class="delivery-details">' + singleDetails + sharedDetails + '</div>' +
             '<div class="delivery-date">' + dateStr + '</div>' +
@@ -1289,8 +1364,9 @@
       var nd = normalizeDelivery(d);
       editingId = id;
 
-      // Clear all edit radios first
+      // Clear all edit radios and checkboxes first
       document.querySelectorAll('.edit-modal input[type="radio"]').forEach(function(r) { r.checked = false; });
+      document.querySelectorAll('.edit-modal input[type="checkbox"]').forEach(function(c) { c.checked = false; });
 
       // Set birth type
       setRadio('editBirthType', nd.birthType);
@@ -1303,6 +1379,7 @@
         document.getElementById('editName' + num).value = baby ? baby.name : '';
         document.getElementById('editWeight' + num + 'Lbs').value = baby ? baby.weightLbs : '';
         document.getElementById('editWeight' + num + 'Oz').value = baby ? (baby.weightOz || '') : '';
+        document.getElementById('editAngel' + num).checked = !!(baby && baby.angel);
         if (baby) {
           setRadio('editGender' + num, baby.gender);
         }
@@ -1346,7 +1423,8 @@
           name: name,
           gender: gender,
           weightLbs: parseInt(lbs),
-          weightOz: parseFloat(document.getElementById('editWeight' + i + 'Oz').value) || 0
+          weightOz: parseFloat(document.getElementById('editWeight' + i + 'Oz').value) || 0,
+          angel: document.getElementById('editAngel' + i).checked
         });
       }
 
